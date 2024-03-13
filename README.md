@@ -8,6 +8,10 @@ This application provides a visual representation of air quality data for differ
 - PIL (Python Imaging Library)
 - pyodbc
 
+- pip install tkinter
+- pip install Pillow
+- pip install pyodbc
+
 ## How to Use
 
 1. **Launch the Application**: Run the Python script `LouisianaMapApp.py` to launch the application.
