@@ -75,6 +75,7 @@ class LouisianaMapApp(tk.Tk):
         # try to connect to SQL server. 
         try:
             self.conn = pyodbc.connect(
+                #'Driver={ODBC Driver 18 for SQL Server};Server=tcp:<database-server-name>.database.windows.net,1433;Database=<database-name>;Encrypt=yes;TrustServerCertificate=no;Connection Timeout=30' for azure I think
                 "DRIVER={SQL Server};SERVER=localhost;DATABASE=AirPollution;Trusted_Connection=yes;"    # I have it set to connect to my localhost using Windows Authentication. Database is named "AirPollution"
             )
 
