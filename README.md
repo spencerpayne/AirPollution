@@ -9,7 +9,7 @@ This application provides a visual representation of air quality data for differ
 - pyodbc
 
 - pip install tkinter
-- pip install Pillow
+- pip install pillow
 - pip install pyodbc
 
 ## How to Use
