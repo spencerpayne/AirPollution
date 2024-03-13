@@ -25,3 +25,8 @@ This application provides a visual representation of air quality data for differ
 
 4. **Coordinate Bank**: The application maintains a list of available coordinates fetched from the database. Users can select coordinates from this list for quick access.
 
+## Screenshots
+
+![](/Screenshots/AirQualityImage1.png/)
+![](/Screenshots/AirQualityImage2.png/)
+![](/Screenshots/AirQualityImage3.png/)
