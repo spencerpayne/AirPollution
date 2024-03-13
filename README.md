@@ -21,9 +21,3 @@ This application provides a visual representation of air quality data for differ
 
 4. **Coordinate Bank**: The application maintains a list of available coordinates fetched from the database. Users can select coordinates from this list for quick access.
 
-## Additional Notes
-
-- The map image is displayed with the Louisiana map image resized to fit the window.
-- The coordinates of the map corners are predefined but can be adjusted if needed.
-- Air quality data is fetched from the SQL Server database using pyodbc.
-- The application attempts to connect to the SQL Server database on startup. Ensure that the database connection details are correctly configured.
