@@ -93,10 +93,11 @@ class LouisianaMapApp(tk.Tk):
         except Exception as e:
             print("Error connecting to SQL Server:", e)
 
+        # our button that adds data to the database.
         self.add_data_button = tk.Button(
             self, text="Add New Data", command=self.add_new_data
         )
-        self.add_data_button.place(x=820, y=200)
+        self.add_data_button.place(x=820, y=500)
 
     #   this is where we grab the SQL data. We can change this if needed
     def fetch_air_quality_data(self, lat, lon): # grabs the lat and lon
@@ -179,7 +180,7 @@ class LouisianaMapApp(tk.Tk):
             else:
                 print("Failed to fetch air quality data.")
 
-    # this is how we add a red "marker" to the selected coordinate. More of a WIP, can't seem to get it working perfectly
+    # when a coordinate is selected from the coordinate bank.
     def on_coordinate_selected(self, event):
         selected_index = self.coordinates_listbox.curselection()
         if selected_index:
@@ -201,6 +202,7 @@ class LouisianaMapApp(tk.Tk):
             x = (lon - self.map_bounds["top_left"][1]) / lon_range * map_width
             y = (self.map_bounds["top_left"][0] - lat) / lat_range * map_height
 
+            # this is what creates the red marker on the map.
             marker_size = 10
             self.canvas.create_oval(
                 x - marker_size,
@@ -210,10 +212,11 @@ class LouisianaMapApp(tk.Tk):
                 fill="red",
                 tag="marker",
             )
+    # this allows us to add new data into the SQL Server.
     def add_new_data(self):
         try:
-            lat, lon = map(float, self.input_entry.get().split(","))
-            air_quality_data = [float(entry.get()) for entry in self.air_quality_labels.values()]
+            lat, lon = map(float, self.input_entry.get().split(","))    # splits the lat and long values by a ,
+            air_quality_data = [float(entry.get()) for entry in self.air_quality_labels.values()]   # grab air quality data
             cursor = self.conn.cursor()
             query = "INSERT INTO AirQualityData (Latitude, Longitude, CO2, PM25, PM10, Temperature, Humidity) VALUES (?, ?, ?, ?, ?, ?, ?)"
             cursor.execute(query, (lat, lon, *air_quality_data))

@@ -25,6 +25,8 @@ This application provides a visual representation of air quality data for differ
 
 4. **Coordinate Bank**: The application maintains a list of available coordinates fetched from the database. Users can select coordinates from this list for quick access.
 
+5. **Adding New Data into the Database**: To add new data to the database, simply choose a coordinate, and make sure it is selected in the "selected coordinates" field. Then, fill in your data in the CO2, PM2.5, PM10, Temperature, and Humidity fields. Finally, you can click the "Add New Data" button, and your data will be added to the database.
+
 ## Screenshots
 
 ![](/Screenshots/AirQualityImage1.png/)
