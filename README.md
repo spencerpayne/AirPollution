@@ -8,24 +8,36 @@ This application provides a visual representation of air quality data for differ
 - PIL (Python Imaging Library)
 - pyodbc
 
-- pip install tkinter
-- pip install pillow
-- pip install pyodbc
+
+   pip install pillow pyodbc
+
 
 ## How to Use
 
-1. **Launch the Application**: Run the Python script `LouisianaMapApp.py` to launch the application.
+1. **Opening the Application:**
+   - Run the Python script (`LouisianaMapApp.py`) to launch the application.
 
-2. **Select Coordinates**: There are three ways to select coordinates:
-   - Enter coordinates manually in the provided entry box. Use the format: `latitude, longitude` (e.g., `92.4324, -91.43423`). Press Enter to fetch the air quality data.
-   - Click on the map to select coordinates visually.
-   - Choose from the list of available coordinates in the coordinate bank.
+2. **Viewing the Map:**
+   - Upon launching, a window will appear displaying the map of Louisiana.
 
-3. **View Air Quality Data**: Once coordinates are selected, the application displays air quality data including CO2 levels, PM2.5 levels, PM10 levels, temperature, and humidity in the corresponding entry fields.
+3. **Select Coordinates:**
+   - **Click on Map:** Click anywhere on the map to select coordinates. A red marker will indicate the selected location.
+   - **Manual Input:** Alternatively, you can manually enter coordinates in the input box provided. Press Enter or click the "Search" button to fetch data for the entered coordinates.
+   - **Coordinate Bank:** You can select coordinates from the list of available coordinates displayed in the "Available Coordinates" section. Click on a coordinate in the list to populate the input box with the selected coordinates. Press Enter or click the "Search" button to fetch data for the selected coordinates.
 
-4. **Coordinate Bank**: The application maintains a list of available coordinates fetched from the database. Users can select coordinates from this list for quick access.
+4. **View Air Quality Data:**
+   - After selecting or entering coordinates, the application will fetch air quality data corresponding to those coordinates. The fetched data will be displayed in the labeled fields for CO2, PM2.5, PM10, Temperature, and Humidity.
 
-5. **Adding New Data into the Database**: To add new data to the database, simply choose a coordinate, and make sure it is selected in the "selected coordinates" field. Then, fill in your data in the CO2, PM2.5, PM10, Temperature, and Humidity fields. Finally, you can click the "Add New Data" button, and your data will be added to the database.
+5. **Adding New Data:**
+   - To add new data to the database, first select or enter the coordinates for the location where the data will be added.
+   - Enter the new data values for CO2, PM2.5, PM10, Temperature, and Humidity in the provided input fields.
+   - Click the "Add New Data" button to insert the new data into the database. The list of available coordinates will be updated accordingly.
+
+6. **Clear Entries:**
+   - Use the "Clear" button to clear all entries in the input fields for coordinates and air quality data.
+
+7. **Closing the Application:**
+   - Close the application window to exit the program.
 
 ## Screenshots
 

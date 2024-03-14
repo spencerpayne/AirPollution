@@ -42,15 +42,27 @@ class LouisianaMapApp(tk.Tk):
         self.input_entry.place(x=820, y=50)
         self.input_entry.bind("<Return>", self.on_user_input)   # pressing the enter key fetches the info
 
+        self.add_submit_button = tk.Button(self, text="Search", command=self.on_user_input) #   add a search button so the user can search for their coordinates.
+        self.add_submit_button.place(x=1035, y=46.5)
+
         #   right here we add our labels for our air pollution, we can adjust this accordingly
         self.air_quality_labels = {}
         labels = ["CO2", "PM2.5", "PM10", "Temperature", "Humidity"]
         for i, label_text in enumerate(labels): # this is how we space out the labels evenly, with a for loop. 
             label = tk.Label(self, text=f"{label_text}: ", anchor="w")
-            label.place(x=820, y=350 + i * 30)  # right here we use the for loop the evenly space out the labels vertically
+            label.place(x=820, y=150 + i * 30)  # right here we use the for loop the evenly space out the labels vertically
             entry = tk.Entry(self, width=20)
-            entry.place(x=920, y=350 + i * 30)  # same thing with the entry
+            entry.place(x=920, y=150 + i * 30)  # same thing with the entry
             self.air_quality_labels[label_text] = entry
+
+                # button to add data to database.
+        self.add_data_button = tk.Button(
+            self, text="Add New Data", command=self.add_new_data
+        )
+        self.add_data_button.place(x=820, y=350)
+
+        self.clear_button = tk.Button(self, text="Clear", command=self.clear_entries)
+        self.clear_button.place(x=925, y=350)
 
         #   label that says "available coordinates"
         available_label = tk.Label(self, text="Available Coordinates:")
@@ -61,7 +73,7 @@ class LouisianaMapApp(tk.Tk):
         listbox_frame.place(x=1100, y=50)
 
         # here is the coordinate bank. It lists all the current coordinates (lat, long) in the SQL query.
-        self.coordinates_listbox = tk.Listbox(listbox_frame, width=40, height=15)
+        self.coordinates_listbox = tk.Listbox(listbox_frame, width=40, height=30)
         self.coordinates_listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         self.coordinates_listbox.bind("<<ListboxSelect>>", self.on_coordinate_selected)
 
@@ -72,32 +84,22 @@ class LouisianaMapApp(tk.Tk):
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         self.coordinates_listbox.config(yscrollcommand=scrollbar.set)   # here, we attatch the scrollbar to the coordinate bank.
 
-
-
         # try to connect to SQL server. 
         try:
             self.conn = pyodbc.connect(
                 #'Driver={ODBC Driver 18 for SQL Server};Server=tcp:<database-server-name>.database.windows.net,1433;Database=<database-name>;Encrypt=yes;TrustServerCertificate=no;Connection Timeout=30' for azure I think
                 "DRIVER={SQL Server};SERVER=localhost;DATABASE=AirPollution;Trusted_Connection=yes;"    # I have it set to connect to my localhost using Windows Authentication. Database is named "AirPollution"
             )
-
             #
             #
             #   I think we should add the sql queries here?
             #
             #
-            
 
             print("Connected to SQL Server successfully")
-            self.load_coordinates()
+            self.load_coordinates() 
         except Exception as e:
             print("Error connecting to SQL Server:", e)
-
-        # our button that adds data to the database.
-        self.add_data_button = tk.Button(
-            self, text="Add New Data", command=self.add_new_data
-        )
-        self.add_data_button.place(x=820, y=500)
 
     #   this is where we grab the SQL data. We can change this if needed
     def fetch_air_quality_data(self, lat, lon): # grabs the lat and lon
@@ -116,10 +118,10 @@ class LouisianaMapApp(tk.Tk):
         try:
             cursor = self.conn.cursor()
             cursor.execute("SELECT DISTINCT Latitude, Longitude FROM AirQualityData")
-            coordinates = cursor.fetchall()
-            print("Fetched coordinates:", coordinates)
+            coordinates = cursor.fetchall() # retrieve all coordinates
+            print("Fetched coordinates:", coordinates)  # list them in the console
             for lat, lon in coordinates:
-                self.coordinates_listbox.insert(tk.END, f"{lat}, {lon}")
+                self.coordinates_listbox.insert(tk.END, f"{lat}, {lon}")    # list them in the listbox
         except Exception as e:
             print("Error loading coordinates:", e)
 
@@ -139,7 +141,7 @@ class LouisianaMapApp(tk.Tk):
         self.input_entry.delete(0, tk.END)  # delete entry if another coordinate is selected
         self.input_entry.insert(0, f"{lat}, {lon}")
 
-        self.canvas.delete("marker")
+        self.canvas.delete("marker")    # marker deletes itself when user clicks somewhere else
         
         air_quality_data = self.fetch_air_quality_data(lat, lon)
         if air_quality_data:
@@ -159,11 +161,11 @@ class LouisianaMapApp(tk.Tk):
             tag="marker",
         )
     # this checks the user input when the
-    def on_user_input(self, event):
-        input_text = self.input_entry.get() # grab user input
+    def on_user_input(self, event=None):
+        input_text = self.input_entry.get()
         if input_text:
             try:
-                lat, lon = map(float, input_text.split(","))    # splits the user input, the coordinates, by a , For example, 93, 95 will be read as 93 and 95 seperately.
+                lat, lon = map(float, input_text.split(","))    # split lat and long by a ,
             except ValueError:
                 print("Invalid coordinates format. Please use latitude,longitude.")
                 return
@@ -171,16 +173,16 @@ class LouisianaMapApp(tk.Tk):
             if air_quality_data is not None:
                 if air_quality_data:
                     for label_text, value in zip(
-                        self.air_quality_labels.keys(), air_quality_data    # add SQL data into the boxes
+                        self.air_quality_labels.keys(), air_quality_data
                     ):
                         self.air_quality_labels[label_text].delete(0, tk.END)
                         self.air_quality_labels[label_text].insert(0, value)
                 else:
                     print("No air quality data found for the provided coordinates.")
             else:
-                print("Failed to fetch air quality data.")
+                print("No air quality data found for the provided coordinates.")
 
-    # when a coordinate is selected from the coordinate bank.
+    # this is how we add a red "marker" to the selected coordinate. More of a WIP, can't seem to get it working perfectly
     def on_coordinate_selected(self, event):
         selected_index = self.coordinates_listbox.curselection()
         if selected_index:
@@ -202,7 +204,6 @@ class LouisianaMapApp(tk.Tk):
             x = (lon - self.map_bounds["top_left"][1]) / lon_range * map_width
             y = (self.map_bounds["top_left"][0] - lat) / lat_range * map_height
 
-            # this is what creates the red marker on the map.
             marker_size = 10
             self.canvas.create_oval(
                 x - marker_size,
@@ -212,20 +213,25 @@ class LouisianaMapApp(tk.Tk):
                 fill="red",
                 tag="marker",
             )
-    # this allows us to add new data into the SQL Server.
+    #   this lets us add data into the database. To enter new data, choose a coordinate, and insert your data into the CO2, PM2.5, PM10, Temperature, and Humidity fields. Then click the button. Your data should be added to the database.
     def add_new_data(self):
         try:
-            lat, lon = map(float, self.input_entry.get().split(","))    # splits the lat and long values by a ,
-            air_quality_data = [float(entry.get()) for entry in self.air_quality_labels.values()]   # grab air quality data
+            lat, lon = map(float, self.input_entry.get().split(","))
+            air_quality_data = [float(entry.get()) for entry in self.air_quality_labels.values()]
             cursor = self.conn.cursor()
             query = "INSERT INTO AirQualityData (Latitude, Longitude, CO2, PM25, PM10, Temperature, Humidity) VALUES (?, ?, ?, ?, ?, ?, ?)"
-            cursor.execute(query, (lat, lon, *air_quality_data))
+            cursor.execute(query, (lat, lon, *air_quality_data))    # inserts data
             self.conn.commit()
             print("New data added successfully")
             self.coordinates_listbox.delete(0, tk.END)
-            self.load_coordinates()
+            self.load_coordinates() # whenever new data is entered into the database by the user, update the listbox/databank.
         except Exception as e:
             print("Error adding new data:", e)
+    
+    def clear_entries(self):    # this allows us to clear all entry boxes.
+        self.input_entry.delete(0, tk.END)
+        for entry in self.air_quality_labels.values():
+            entry.delete(0, tk.END)
 
 
 if __name__ == "__main__":
