@@ -8,9 +8,7 @@ This application provides a visual representation of air quality data for differ
 - PIL (Python Imaging Library)
 - pyodbc
 
-
-   pip install pillow pyodbc
-
+``pip install tkinter pillow pyodbc``
 
 ## How to Use
 
