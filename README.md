@@ -13,7 +13,7 @@ This application provides a visual representation of air quality data for differ
 ## How to Use
 
 1. **Opening the Application:**
-   - Run the Python script (`LouisianaMapApp.py`) to launch the application.
+   - Run the Python script (`LouisianaAirPollution.py`) to launch the application.
 
 2. **Viewing the Map:**
    - Upon launching, a window will appear displaying the map of Louisiana.
