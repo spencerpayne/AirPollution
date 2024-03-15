@@ -1,4 +1,5 @@
 # required packages: tkinter, PIL, pyodbc
+# you will need SQL Server running on your computer. Choose the developer edition. https://www.microsoft.com/en-us/sql-server/sql-server-downloads 
 # you'll also need Python 3.12.2 https://www.python.org/downloads/
 # in CMD or powershell, run "pip install tk pillow pyodbc" after you install python
 # To use:
