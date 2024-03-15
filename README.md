@@ -1,4 +1,4 @@
-# Louisiana Air Quality Map
+# Louisiana Air Pollution Map
 
 This application provides a visual representation of air quality data for different locations in Louisiana. It allows users to select specific coordinates on a map or input coordinates manually to retrieve air quality information. The data is fetched from a SQL Server database named "AirPollution".
 
