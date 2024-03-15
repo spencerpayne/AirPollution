@@ -1,12 +1,20 @@
 # required packages: tkinter, PIL, pyodbc
+# you'll also need Python 3.12.2 https://www.python.org/downloads/
+# in CMD or powershell, run "pip install tk pillow pyodbc" after you install python
 # To use:
 # Enter coordinates into the box or select from the coordinate bank. Enter it like this: 92.4324, -91.43423
 # You can also click on the map to select coordinates. 
 # Press enter while the selected coordinate box is highlighted to search.
+# https://docs.python.org/3/library/tkinter.html / https://github.com/mkleehammer/pyodbc / https://pillow.readthedocs.io/en/stable/?badge=latest
+
+# before running, check line #'s: 53, 94, 111, 123, 225, 226 - change out Database name, Table name, Column names
+# I couldn't get it running on the Azure Virtual Machine, I ended up installing SQL Server on my personal computer.
+
 import tkinter as tk
 from tkinter import *
 from PIL import Image, ImageTk
 import pyodbc
+
 
 class LouisianaMapApp(tk.Tk):
     def __init__(self):
