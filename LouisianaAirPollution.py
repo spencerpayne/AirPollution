@@ -84,7 +84,7 @@ class LouisianaMapApp(tk.Tk):
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         self.coordinates_listbox.config(yscrollcommand=scrollbar.set)   # here, we attatch the scrollbar to the coordinate bank.
 
-        # try to connect to SQL server. 
+        # try to connect to SQL server. - this is important. change the database name if its not called AirPollution.
         try:
             self.conn = pyodbc.connect(
                 #'Driver={ODBC Driver 18 for SQL Server};Server=tcp:<database-server-name>.database.windows.net,1433;Database=<database-name>;Encrypt=yes;TrustServerCertificate=no;Connection Timeout=30' for azure I think
