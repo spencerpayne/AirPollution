@@ -1,248 +1,180 @@
-# required packages: tkinter, PIL, pyodbc
-# you will need SQL Server running on your computer. Choose the developer edition. https://www.microsoft.com/en-us/sql-server/sql-server-downloads 
-# you'll also need Python 3.12.2 https://www.python.org/downloads/
-# in CMD or powershell, run "pip install tk pillow pyodbc" after you install python
-# To use:
-# Enter coordinates into the box or select from the coordinate bank. Enter it like this: 92.4324, -91.43423
-# You can also click on the map to select coordinates. 
-# Press enter while the selected coordinate box is highlighted to search.
-# https://docs.python.org/3/library/tkinter.html / https://github.com/mkleehammer/pyodbc / https://pillow.readthedocs.io/en/stable/?badge=latest
+import tkinter as tk    #imports tkinter as tk so we don't have to write out tkinter everytime
+from tkinter import *   # imports all of tkinter's modules
+from tkinter import ttk
+import pyodbc   # allows us to connect python to the SQL Server
+import tkcalendar   # calendar widget for tkinter
+from datetime import datetime   #datetime module so we can convert dates to match the server
+import tkintermapview   # this gives us an interactive map
 
-# before running, check line #'s: 53, 94, 111, 123, 225, 226 - change out Database name, Table name, Column names
-# I couldn't get it running on the Azure Virtual Machine, I ended up installing SQL Server on my personal computer.
-
-import tkinter as tk
-from tkinter import *
-from PIL import Image, ImageTk
-import pyodbc
-
+# To run this program:
+# Ensure you have the following:
+# SQL Server, python, pyodbc, tkinter, tkcalendar, and tkintermapview
 
 class LouisianaMapApp(tk.Tk):
-    def __init__(self):
-        super().__init__()
+    def __init__(self): # call the main window "self"
+        super().__init__()  # initialize
 
         #   add a title and set the size of the window.
-        self.title("Air Quality of Louisiana")
-        self.geometry("1400x600")
+        self.title("Air Quality of Louisiana")  # sets the title 
+        self.geometry("1500x650")   # sets the window size
 
-        #   open the image of Louisiana map and set it to 800x600 so it fits in the screen.
-        self.map_image = Image.open("louisiana_map.jpg")
-        self.map_image = self.map_image.resize((800, 600))
-        self.map_photo = ImageTk.PhotoImage(self.map_image)
-
-        #   here, we set the bounds of the map, the very top left corner of the map is 33.66452, -95.57564. We can adjust this if we need to.
-        self.map_bounds = {
-            "top_left": (33.66452, -95.57564),
-            "bottom_right": (29.0, -89.0),
-        }
-
-        #   create a canvas to hold the map of Louisiana and set it to the same height and width as the image.
-        self.canvas = tk.Canvas(self, width=800, height=600)
-        self.canvas.pack(side=tk.LEFT)  # place it on the left side of the window.
-        self.canvas.create_image(0, 0, anchor=tk.NW, image=self.map_photo)  #   add the image to the canvas
-        self.canvas.bind("<Button-1>", self.on_map_click)   # create an event when the user clicks on the map
-
+        # ------- here, we add all of the widgets for tkinter, including labels, entrys, buttons, radiobuttons, a map, and a calendar. -------
         #   add a label for the selected coordinates box.
-        input_label = tk.Label(self, text="Selected Coordinates:")
-        input_label.place(x=820, y=25)  # place the label
+        self.input_label = tk.Label(self, text="Selected City:")
+        self.input_label.grid(column=0, row=1, sticky="NW")  # place the label in column 0, row 1, and keep it in the NW quadrant of the grid
 
         #   add the entry box for the user to enter coordinates.
         self.input_entry = tk.Entry(self, width=35)
-        self.input_entry.place(x=820, y=50)
-        self.input_entry.bind("<Return>", self.on_user_input)   # pressing the enter key fetches the info
+        self.input_entry.grid(column=1, row=1, sticky="NW") 
+        #TODO add a dropdown where the user can select each city in the database
 
-        self.add_submit_button = tk.Button(self, text="Search", command=self.on_user_input) #   add a search button so the user can search for their coordinates.
-        self.add_submit_button.place(x=1035, y=46.5)
+        # label that says "Date: "
+        self.date_label = tk.Label(self, text="Date: ")
+        self.date_label.grid(column=0, row=2, sticky="NW", pady=(100, 10))  # give it padding so the spacing looks nicer.
 
+        self.calendar = tkcalendar.Calendar(self, year=2024, month=3, day=22)   # here we add the calendar and set it to March 22, 2024.
+        self.calendar.grid(column=1, row=2, rowspan=2, sticky="NW", pady=(100, 10)) # span it across multiple rows 
+
+        self.info_label = tk.Label(self, text="Or, search for a year and choose a sort method\n and the program will output which city had\n the highest or lowest number of cases for that year.")  # provide instruction to user
+        self.info_label.grid(column=3, row=0, columnspan=3, sticky="W")
+
+        self.info_label2 = tk.Label(self, text="Enter a city in Louisiana and select a date BELOW\n to see the PM 2.5 and Cancer Data") # more user instruction
+        self.info_label2.grid(column=1, row=0, columnspan=2, sticky="W")
+
+        self.year_label = tk.Label(self, text="Year: ") # label that says "Year: "
+        self.year_label.grid(column=2, row=1, sticky="E")
+
+        self.year_entry = tk.Entry(self, width=35)    # where the user can enter a specific year.
+        self.year_entry.grid(column=3, row=1, sticky="W")
+
+        self.sort_label = tk.Label(self, text="Sort: ") # label for the sort radio buttons
+        self.sort_label.grid(column=2, row=2, sticky="SE")
+
+        self.highest_first_sort = tk.Radiobutton(self, text="Highest First", value="highest")   # radio button that lets user choose to sort by highest first
+        self.highest_first_sort.grid(column=3, row=2, sticky="SW")
+
+        self.lowest_first_sort = tk.Radiobutton(self, text="Lowest first", value="lowest")  # radio button that lets user choose to sort by lowest first
+        self.lowest_first_sort.grid(column=3, row=3, sticky="NW")
+
+        self.add_submit_button = tk.Button(self, text="Search", command=self.on_user_input) # submit button, uses "on_user_input" function when clicked
+        self.add_submit_button.grid(column=1, row=4, sticky="E")
+
+        # ------- MAP -------
+        self.map_widget = tkintermapview.TkinterMapView(self, width=500, height=500, corner_radius=0)   # add the map to the window and set the height and width and corner radius.
+        self.map_widget.grid(column=4, row=2, padx=(100, 10), rowspan=5, columnspan=5, sticky="SE")
+        self.map_widget.set_position(30.9843, -91.9623) # Louisiana coordinates
+        self.map_widget.set_zoom(7)
+
+        # ------- Add More Data Button -------
+        self.add_data_widget = tk.Button(self, text="Add More Data", command=self.open_new_data_window) # button that allows user to enter more data to database
+        self.add_data_widget.grid(column=2, row=4, sticky="W")
+        #TODO: add way to add data to database
+        
+        # ------- Output Label -------
+        self.output_label = tk.Label(self, text="Output:")
+        self.output_label.grid(column=2, row=5, sticky="SW")
         #   right here we add our labels for our air pollution, we can adjust this accordingly
+
+        # ------- Label and Entry for our data retrived from database -------
         self.air_quality_labels = {}
-        labels = ["CO2", "PM2.5", "PM10", "Temperature", "Humidity"]
+        labels = ["PM 2.5", "Cancer Data", "City with highest/lowest rate: "]
         for i, label_text in enumerate(labels): # this is how we space out the labels evenly, with a for loop. 
-            label = tk.Label(self, text=f"{label_text}: ", anchor="w")
-            label.place(x=820, y=150 + i * 30)  # right here we use the for loop the evenly space out the labels vertically
+            label = tk.Label(self, text=f"{label_text}")
+            label.grid(column=1, row=6+i*30, sticky="SE")  # right here we use the for loop the evenly space out the labels vertically
             entry = tk.Entry(self, width=20)
-            entry.place(x=920, y=150 + i * 30)  # same thing with the entry
+            entry.grid(column=2, row=6+i*30, sticky="SE") # same thing with the entry
             self.air_quality_labels[label_text] = entry
 
-                # button to add data to database.
-        self.add_data_button = tk.Button(
-            self, text="Add New Data", command=self.add_new_data
-        )
-        self.add_data_button.place(x=820, y=350)
-
-        self.clear_button = tk.Button(self, text="Clear", command=self.clear_entries)
-        self.clear_button.place(x=925, y=350)
-
-        #   label that says "available coordinates"
-        available_label = tk.Label(self, text="Available Coordinates:")
-        available_label.place(x=1150, y=25)    # place it
-
-        # we create a frame that holds the listbox/coordinate bank and the scrollbar.
-        listbox_frame = tk.Frame(self)
-        listbox_frame.place(x=1100, y=50)
-
-        # here is the coordinate bank. It lists all the current coordinates (lat, long) in the SQL query.
-        self.coordinates_listbox = tk.Listbox(listbox_frame, width=40, height=30)
-        self.coordinates_listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        self.coordinates_listbox.bind("<<ListboxSelect>>", self.on_coordinate_selected)
-
-        # create the scrollbar for the coordinate bank.
-        scrollbar = tk.Scrollbar(
-            listbox_frame, orient=tk.VERTICAL, command=self.coordinates_listbox.yview
-        )
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        self.coordinates_listbox.config(yscrollcommand=scrollbar.set)   # here, we attatch the scrollbar to the coordinate bank.
-
-        # try to connect to SQL server. - this is important. change the database name if its not called AirPollution.
+        # ------- Connect to database - user can modify the server and database if needed -------
         try:
-            self.conn = pyodbc.connect(
-                #'Driver={ODBC Driver 18 for SQL Server};Server=tcp:<database-server-name>.database.windows.net,1433;Database=<database-name>;Encrypt=yes;TrustServerCertificate=no;Connection Timeout=30' for azure I think
-                "DRIVER={SQL Server};SERVER=localhost;DATABASE=AirPollution;Trusted_Connection=yes;"    # I have it set to connect to my localhost using Windows Authentication. Database is named "AirPollution"
+            self.conn = pyodbc.connect( # connect to SQL Server with pyodbc. 
+                "DRIVER={SQL Server};SERVER=localhost;DATABASE=AirPollution;Trusted_Connection=yes;"   
             )
-            #
-            #
-            #   I think we should add the sql queries here?
-            #
-            #
-
-            print("Connected to SQL Server successfully")
+            print("Connected to SQL Server successfully")   # print this if successful connection
             self.load_coordinates() 
         except Exception as e:
-            print("Error connecting to SQL Server:", e)
+            print("Error connecting to SQL Server:", e) # print an exception if unsuccessful connection
 
-    #   this is where we grab the SQL data. We can change this if needed
-    def fetch_air_quality_data(self, lat, lon): # grabs the lat and lon
+    # ------- function that fetches air quality from database, uses user input of Date and City -------
+    def fetch_air_quality_data(self, city, lon, date):
         try:
-            cursor = self.conn.cursor() # need a cursor to connect 
-            query = "SELECT CO2, PM25, PM10, Temperature, Humidity FROM AirQualityData WHERE Latitude = ? AND Longitude = ?"    # query to select air pollution data
-            cursor.execute(query, (lat, lon))   # execute query.
-            rows = cursor.fetchall()    # grabs the rows that were just queried
+            cursor = self.conn.cursor() # pyodbc uses a cursor to execute querys.
+            query = "SELECT PM25, AirQualityRating FROM PollutionData WHERE Date = ? AND City = ?"  # this gets the PM 2.5 and Air Quality Rating value with the user input for Date and City.
+            cursor.execute(query, (date, city))
+            rows = cursor.fetchall()
             return rows[0] if rows else None
         except Exception as e:
             print("Error fetching air quality data:", e)
             return None
 
-    # this is how we add the coordinates to the listbox/coordinate bank. It also prints the loaded coordinates into the console.
+    # ------- function that gets all of the cities from the database and prints them in the console. -------
     def load_coordinates(self):
-        try:
-            cursor = self.conn.cursor()
-            cursor.execute("SELECT DISTINCT Latitude, Longitude FROM AirQualityData")
-            coordinates = cursor.fetchall() # retrieve all coordinates
-            print("Fetched coordinates:", coordinates)  # list them in the console
-            for lat, lon in coordinates:
-                self.coordinates_listbox.insert(tk.END, f"{lat}, {lon}")    # list them in the listbox
-        except Exception as e:
-            print("Error loading coordinates:", e)
+        cursor = self.conn.cursor() # connect to database
+        cursor.execute("SELECT DISTINCT City FROM PollutionData")   # execute query
+        city = cursor.fetchall() # retrieves all cities
+        print("Fetched cities:", city)  # list them in the console
 
-    # this determines the map bounds/coordinates and then when a user clicks on the map, the coordinates are added to the search coordinate box.
-    def on_map_click(self, event):
-        x, y = event.x, event.y
-        map_width, map_height = self.map_image.size
-        lat_range = (
-            self.map_bounds["top_left"][0] - self.map_bounds["bottom_right"][0]
-        )
-        lon_range = (
-            self.map_bounds["bottom_right"][1] - self.map_bounds["top_left"][1]
-        )
-        lat = self.map_bounds["top_left"][0] - (lat_range * y / map_height) # calculate latitude on map clicked
-        lon = self.map_bounds["top_left"][1] + (lon_range * x / map_width)  # calculate longitude on map clicked
-        
-        self.input_entry.delete(0, tk.END)  # delete entry if another coordinate is selected
-        self.input_entry.insert(0, f"{lat}, {lon}")
+    # ------- function that grabs the user input from the city and date entry -------
+    def on_user_input(self):    
+        city = self.input_entry.get()   # get city
+        date_str = self.calendar.get_date() # get date
+        date_obj = datetime.strptime(date_str, '%m/%d/%y')  # create the format for SQL Server
+        formatted_date = date_obj.strftime('%Y-%m-%d')  # finally format the date
 
-        self.canvas.delete("marker")    # marker deletes itself when user clicks somewhere else
-        
-        air_quality_data = self.fetch_air_quality_data(lat, lon)
-        if air_quality_data:
-            for label_text, entry in self.air_quality_labels.items():   # add the SQL data into the CO2, PM2.5, PM10, Temperature, and Humidity boxes.
-                entry.delete(0, tk.END)
-                entry.insert(0, air_quality_data[label_text])
-        else:
-            print("No air quality data found for the provided coordinates.")
+        # ------- if user chooses Shreveport, add a marker on the map. -------
+        if city == "Shreveport":    # add a marker to the map if the user chooses Shreveport
+            self.map_widget.set_position(32.6137, -93.8655, marker=True)  # Shreveport coorindates
+            self.map_widget.set_zoom(7)
+        # TODO: add more cities
 
-        marker_size = 10
-        self.canvas.create_oval(
-            x - marker_size,
-            y - marker_size,
-            x + marker_size,
-            y + marker_size,
-            fill="red",
-            tag="marker",
-        )
-    # this checks the user input when the
-    def on_user_input(self, event=None):
-        input_text = self.input_entry.get()
-        if input_text:
-            try:
-                lat, lon = map(float, input_text.split(","))    # split lat and long by a ,
-            except ValueError:
-                print("Invalid coordinates format. Please use latitude,longitude.")
-                return
-            air_quality_data = self.fetch_air_quality_data(lat, lon)
-            if air_quality_data is not None:
-                if air_quality_data:
-                    for label_text, value in zip(
-                        self.air_quality_labels.keys(), air_quality_data
-                    ):
-                        self.air_quality_labels[label_text].delete(0, tk.END)
-                        self.air_quality_labels[label_text].insert(0, value)
-                else:
-                    print("No air quality data found for the provided coordinates.")
+        # ------- get city and the formatted date and insert -------
+        air_quality_data = self.fetch_air_quality_data(city, formatted_date, formatted_date)    
+        if air_quality_data is not None:
+            if air_quality_data:
+                self.air_quality_labels["PM 2.5"].delete(0, tk.END) # delete anyting in the field
+                self.air_quality_labels["PM 2.5"].insert(0, air_quality_data[0])    # add the PM 2.5 data to the field
+                self.air_quality_labels["Cancer Data"].delete(0, tk.END)    # delete anything in the field
+                self.air_quality_labels["Cancer Data"].insert(0, air_quality_data[1])   # add the Cancer Data to the field
+                
             else:
-                print("No air quality data found for the provided coordinates.")
+                print("No air quality data found for the provided city.")   # error handling
+        else:
+            print("No air quality data found for the provided city.")   # more error handling
 
-    # this is how we add a red "marker" to the selected coordinate. More of a WIP, can't seem to get it working perfectly
-    def on_coordinate_selected(self, event):
-        selected_index = self.coordinates_listbox.curselection()
-        if selected_index:
-            selected_item = self.coordinates_listbox.get(selected_index[0])
-            self.input_entry.delete(0, tk.END)
-            self.input_entry.insert(0, selected_item)
+    # ------- function for when user click on "Add More Data" button -------
+    def open_new_data_window(self): 
+        top = Toplevel()    # top level is the second window that tkinter opens.
+        top.geometry("400x300")
+        top.title("Add New Data")
+        city = Label(top, text="City: ")    # create label
+        city.grid(column=1, row=1)  
 
-            self.canvas.delete("marker")
+        city_entry = Entry(top, width=25)   # create entry
+        city_entry.grid(column=2, row=1)
 
-            lat, lon = map(float, selected_item.split(", "))
+        date_label = Label(top, text="Date: ")
+        date_label.grid(column=1, row=2)
 
-            map_width, map_height = self.map_image.size
-            lat_range = (
-                self.map_bounds["top_left"][0] - self.map_bounds["bottom_right"][0]
-            )
-            lon_range = (
-                self.map_bounds["bottom_right"][1] - self.map_bounds["top_left"][1]
-            )
-            x = (lon - self.map_bounds["top_left"][1]) / lon_range * map_width
-            y = (self.map_bounds["top_left"][0] - lat) / lat_range * map_height
+        date = tkcalendar.Calendar(top, year=2024, month=3, day=22, font=("Arial", 8))  # set default date and font
+        date.grid(column=2, row=2)
 
-            marker_size = 10
-            self.canvas.create_oval(
-                x - marker_size,
-                y - marker_size,
-                x + marker_size,
-                y + marker_size,
-                fill="red",
-                tag="marker",
-            )
-    #   this lets us add data into the database. To enter new data, choose a coordinate, and insert your data into the CO2, PM2.5, PM10, Temperature, and Humidity fields. Then click the button. Your data should be added to the database.
-    def add_new_data(self):
-        try:
-            lat, lon = map(float, self.input_entry.get().split(","))
-            air_quality_data = [float(entry.get()) for entry in self.air_quality_labels.values()]
-            cursor = self.conn.cursor()
-            query = "INSERT INTO AirQualityData (Latitude, Longitude, CO2, PM25, PM10, Temperature, Humidity) VALUES (?, ?, ?, ?, ?, ?, ?)"
-            cursor.execute(query, (lat, lon, *air_quality_data))    # inserts data
-            self.conn.commit()
-            print("New data added successfully")
-            self.coordinates_listbox.delete(0, tk.END)
-            self.load_coordinates() # whenever new data is entered into the database by the user, update the listbox/databank.
-        except Exception as e:
-            print("Error adding new data:", e)
-    
-    def clear_entries(self):    # this allows us to clear all entry boxes.
-        self.input_entry.delete(0, tk.END)
-        for entry in self.air_quality_labels.values():
-            entry.delete(0, tk.END)
+        pm25_label = Label(top, text="PM 2.5: ")
+        pm25_label.grid(column=1, row=3)
+
+        pm_25_entry = Entry(top, width=25)
+        pm_25_entry.grid(column=2, row=3)
+
+        cancer_data_label = Label(top, text="Cancer Data: ")
+        cancer_data_label.grid(column=1, row=4)
+
+        cancer_data_entry = Entry(top, width=25)
+        cancer_data_entry.grid(column=2, row=4)
+
+        sumbit_button = Button(top, text="Submit")
+        sumbit_button.grid(column=1, row=5)
+        top.mainloop()  # mainloop() ensures that the program runs, without it the program won't open
 
 
 if __name__ == "__main__":
-    app = LouisianaMapApp()
-    app.mainloop()
+    app = LouisianaMapApp() # tkinter requires this statement 
+    app.mainloop() # mainloop() ensures that the program runs, without it the program won't open
