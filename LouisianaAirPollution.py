@@ -1,7 +1,7 @@
 import tkinter as tk    #imports tkinter as tk so we don't have to write out tkinter everytime
 from tkinter import *   # imports all of tkinter's modules
 from tkinter import ttk
-import pyodbc   # allows us to connect python to the SQL Server
+#import pyodbc   # allows us to connect python to the SQL Server
 import tkcalendar   # calendar widget for tkinter
 from datetime import datetime   #datetime module so we can convert dates to match the server
 import tkintermapview   # this gives us an interactive map
@@ -16,7 +16,7 @@ class LouisianaMapApp(tk.Tk):
 
         #   add a title and set the size of the window.
         self.title("Air Quality of Louisiana")  # sets the title 
-        self.geometry("1500x650")   # sets the window size
+        self.geometry("1300x650")   # sets the window size
 
         # ------- here, we add all of the widgets for tkinter, including labels, entrys, buttons, radiobuttons, a map, and a calendar. -------
         #   add a label for the selected coordinates box.
@@ -60,8 +60,8 @@ class LouisianaMapApp(tk.Tk):
         self.add_submit_button.grid(column=1, row=4, sticky="E")
 
         # ------- MAP -------
-        self.map_widget = tkintermapview.TkinterMapView(self, width=500, height=500, corner_radius=0)   # add the map to the window and set the height and width and corner radius.
-        self.map_widget.grid(column=4, row=2, padx=(100, 10), rowspan=5, columnspan=5, sticky="SE")
+        self.map_widget = tkintermapview.TkinterMapView(self, width=400, height=400, corner_radius=5)   # add the map to the window and set the height and width and corner radius.
+        self.map_widget.grid(column=3, row=2, padx=(120,10), pady=(50, 10), rowspan=5, columnspan=5, sticky="SE")
         self.map_widget.set_position(30.9843, -91.9623) # Louisiana coordinates
         self.map_widget.set_zoom(7)
 
