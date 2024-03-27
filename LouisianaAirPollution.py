@@ -1,7 +1,6 @@
 import tkinter as tk    #imports tkinter as tk so we don't have to write out tkinter everytime
 from tkinter import *   # imports all of tkinter's modules
-from tkinter import ttk
-#import pyodbc   # allows us to connect python to the SQL Server
+import pyodbc   # allows us to connect python to the SQL Server
 import tkcalendar   # calendar widget for tkinter
 from datetime import datetime   #datetime module so we can convert dates to match the server
 import tkintermapview   # this gives us an interactive map
@@ -88,7 +87,7 @@ class LouisianaMapApp(tk.Tk):
         # ------- Connect to database - user can modify the server and database if needed -------
         try:
             self.conn = pyodbc.connect( # connect to SQL Server with pyodbc. 
-                "DRIVER={SQL Server};SERVER=localhost;DATABASE=AirPollution;Trusted_Connection=yes;"   
+                "DRIVER={ODBC Driver 18 for SQL Server};SERVER=localhost;DATABASE=AirPollution;UID=sa;PWD=DB_Password;TrustServerCertificate=yes"   
             )
             print("Connected to SQL Server successfully")   # print this if successful connection
             self.load_coordinates() 
@@ -121,10 +120,23 @@ class LouisianaMapApp(tk.Tk):
         date_obj = datetime.strptime(date_str, '%m/%d/%y')  # create the format for SQL Server
         formatted_date = date_obj.strftime('%Y-%m-%d')  # finally format the date
 
-        # ------- if user chooses Shreveport, add a marker on the map. -------
+        # ------- if user chooses a certain city, add a marker on the map. -------
         if city == "Shreveport":    # add a marker to the map if the user chooses Shreveport
-            self.map_widget.set_position(32.6137, -93.8655, marker=True)  # Shreveport coorindates
+            self.map_widget.set_position(32.5252, -93.7502, marker=True)  # Shreveport coorindates
             self.map_widget.set_zoom(7)
+        elif city == "Baton Rouge":
+            self.map_widget.set_position(30.4515, -91.1871, marker=True)
+            self.map_widget.set_zoom(7)
+        elif city == "Lafayette":
+            self.map_widget.set_position(30.2241, -92.0198, marker=True)
+            self.map_widget.set_zoom(7)
+        elif city == "Bossier City":
+            self.map_widget.set_position(32.5160, -93.7321, marker=True)
+            self.map_widget.set_zoom(7)
+        elif city == "New Orleans":
+            self.map_widget.set_position(29.9511, -90.0715, marker=True)
+            self.map_widget.set_zoom(7)
+
         # TODO: add more cities
 
         # ------- get city and the formatted date and insert -------
@@ -173,7 +185,6 @@ class LouisianaMapApp(tk.Tk):
         sumbit_button = Button(top, text="Submit")
         sumbit_button.grid(column=1, row=5)
         top.mainloop()  # mainloop() ensures that the program runs, without it the program won't open
-
 
 if __name__ == "__main__":
     app = LouisianaMapApp() # tkinter requires this statement 
