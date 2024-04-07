@@ -76,7 +76,7 @@ class LouisianaMapApp(tk.Tk):
 
         # ------- Label and Entry for our data retrived from database -------
         self.air_quality_labels = {}
-        labels = ["PM 2.5", "Cancer Data", "City with highest/lowest rate: "]
+        labels = ["PM 2.5", "Lung Cancer Cases", "City with highest/lowest rate: "]
         for i, label_text in enumerate(labels): # this is how we space out the labels evenly, with a for loop. 
             label = tk.Label(self, text=f"{label_text}")
             label.grid(column=1, row=6+i*30, sticky="SE")  # right here we use the for loop the evenly space out the labels vertically
@@ -86,10 +86,45 @@ class LouisianaMapApp(tk.Tk):
 
         # ------- Connect to database - user can modify the server and database if needed -------
         try:
-            self.conn = pyodbc.connect( # connect to SQL Server with pyodbc. 
-                "DRIVER={ODBC Driver 18 for SQL Server};SERVER=localhost;DATABASE=AirPollution;UID=sa;PWD=DB_Password;TrustServerCertificate=yes"   
+            AirPollutionDB = {
+                'server': 'localhost',
+                'database': 'AirPollution2',
+                'username': 'sa',
+                'password': 'DB_Password',
+                'driver': '{ODBC Driver 18 for SQL Server}'
+
+            }
+            LungCancerDB = {
+                'server': 'localhost',
+                'database': 'LungCancer',
+                'username': 'sa',
+                'password': 'DB_Password',
+                'driver': '{ODBC Driver 18 for SQL Server}'
+
+            }
+            LocationDB = {
+                'server': 'localhost',
+                'database': 'Location',
+                'username': 'sa',
+                'password': 'DB_Password',
+                'driver': '{ODBC Driver 18 for SQL Server}'
+            }
+
+            # Establish connections
+            self.AirPollutionConnection = pyodbc.connect(
+                f"DRIVER={AirPollutionDB['driver']};SERVER={AirPollutionDB['server']};DATABASE={AirPollutionDB['database']};"
+                f"UID={AirPollutionDB['username']};PWD={AirPollutionDB['password']};TrustServerCertificate=yes"
             )
-            print("Connected to SQL Server successfully")   # print this if successful connection
+
+            self.LungCancerConnection = pyodbc.connect(
+                f"DRIVER={LungCancerDB['driver']};SERVER={LungCancerDB['server']};DATABASE={LungCancerDB['database']};"
+                f"UID={LungCancerDB['username']};PWD={LungCancerDB['password']};TrustServerCertificate=yes"
+            )
+            self.LocationConnection = pyodbc.connect(
+                f"DRIVER={LocationDB['driver']};SERVER={LocationDB['server']};DATABASE={LocationDB['database']};"
+                f"UID={LocationDB['username']};PWD={LocationDB['password']};TrustServerCertificate=yes"
+            )
+            
             self.load_coordinates() 
         except Exception as e:
             print("Error connecting to SQL Server:", e) # print an exception if unsuccessful connection
@@ -97,8 +132,8 @@ class LouisianaMapApp(tk.Tk):
     # ------- function that fetches air quality from database, uses user input of Date and City -------
     def fetch_air_quality_data(self, city, lon, date):
         try:
-            cursor = self.conn.cursor() # pyodbc uses a cursor to execute querys.
-            query = "SELECT PM25, AirQualityRating FROM PollutionData WHERE Date = ? AND City = ?"  # this gets the PM 2.5 and Air Quality Rating value with the user input for Date and City.
+            cursor = self.AirPollutionConnection.cursor() # pyodbc uses a cursor to execute querys.
+            query = " SELECT PM25 FROM BatonRouge WHERE Date = ? AND City = ?"  # this gets the PM 2.5 and Air Quality Rating value with the user input for Date and City.
             cursor.execute(query, (date, city))
             rows = cursor.fetchall()
             return rows[0] if rows else None
@@ -106,10 +141,20 @@ class LouisianaMapApp(tk.Tk):
             print("Error fetching air quality data:", e)
             return None
 
+    def fetchLungCancerRates(self, city, lon, date):
+        try:
+            cursor = self.LungCancerConnection.cursor()
+            query = "SELECT CountOfCases FROM LungCancerRates WHERE Year = ? AND Parish = ?"
+            cursor.execute(query, (date, city))
+            rows = cursor.fetchall()
+            return rows[0] if rows else None
+        except Exception as e:
+                print("Error fetching Lung Cancer Rates", e)
+                return None
     # ------- function that gets all of the cities from the database and prints them in the console. -------
     def load_coordinates(self):
-        cursor = self.conn.cursor() # connect to database
-        cursor.execute("SELECT DISTINCT City FROM PollutionData")   # execute query
+        cursor = self.AirPollutionConnection.cursor() # connect to database
+        cursor.execute("SELECT DISTINCT City FROM BatonRouge")   # execute query
         city = cursor.fetchall() # retrieves all cities
         print("Fetched cities:", city)  # list them in the console
 
@@ -119,6 +164,7 @@ class LouisianaMapApp(tk.Tk):
         date_str = self.calendar.get_date() # get date
         date_obj = datetime.strptime(date_str, '%m/%d/%y')  # create the format for SQL Server
         formatted_date = date_obj.strftime('%Y-%m-%d')  # finally format the date
+        formatted_date2 = date_obj.strftime('%Y')
 
         # ------- if user chooses a certain city, add a marker on the map. -------
         if city == "Shreveport":    # add a marker to the map if the user chooses Shreveport
@@ -140,51 +186,80 @@ class LouisianaMapApp(tk.Tk):
         # TODO: add more cities
 
         # ------- get city and the formatted date and insert -------
-        air_quality_data = self.fetch_air_quality_data(city, formatted_date, formatted_date)    
+        air_quality_data = self.fetch_air_quality_data(city, formatted_date, formatted_date)
         if air_quality_data is not None:
             if air_quality_data:
-                self.air_quality_labels["PM 2.5"].delete(0, tk.END) # delete anyting in the field
-                self.air_quality_labels["PM 2.5"].insert(0, air_quality_data[0])    # add the PM 2.5 data to the field
-                self.air_quality_labels["Cancer Data"].delete(0, tk.END)    # delete anything in the field
-                self.air_quality_labels["Cancer Data"].insert(0, air_quality_data[1])   # add the Cancer Data to the field
-                
+                self.air_quality_labels["PM 2.5"].delete(0, tk.END)
+                self.air_quality_labels["PM 2.5"].insert(0, air_quality_data[0])
             else:
-                print("No air quality data found for the provided city.")   # error handling
+                print("No air quality data found for the provided city.")
         else:
-            print("No air quality data found for the provided city.")   # more error handling
+            print("No air quality data found for the provided city.")
 
-    # ------- function for when user click on "Add More Data" button -------
+        lung_cancer_data = self.fetchLungCancerRates(city, formatted_date2, formatted_date2)
+        if lung_cancer_data is not None:
+            if lung_cancer_data:
+                self.air_quality_labels["Lung Cancer Cases"].delete(0, tk.END)
+                self.air_quality_labels["Lung Cancer Cases"].insert(0, lung_cancer_data[0])  # Changed air_quality_data to lung_cancer_data
+            else:
+                print("No Cancer Rate Data found")
+        else:
+            print("No Cancer Rate Data found")
+
     def open_new_data_window(self): 
         top = Toplevel()    # top level is the second window that tkinter opens.
         top.geometry("400x300")
         top.title("Add New Data")
-        city = Label(top, text="City: ")    # create label
-        city.grid(column=1, row=1)  
 
-        city_entry = Entry(top, width=25)   # create entry
-        city_entry.grid(column=2, row=1)
+        city_label = Label(top, text="City: ")    # create label
+        city_label.grid(column=1, row=1)  
+
+        self.city_entry = Entry(top, width=25)   # Use self to make them accessible from other methods
+        self.city_entry.grid(column=2, row=1)
 
         date_label = Label(top, text="Date: ")
         date_label.grid(column=1, row=2)
 
-        date = tkcalendar.Calendar(top, year=2024, month=3, day=22, font=("Arial", 8))  # set default date and font
-        date.grid(column=2, row=2)
+        self.date = tkcalendar.Calendar(top, year=2024, month=3, day=22, font=("Arial", 8))  # set default date and font
+        self.date.grid(column=2, row=2)
 
         pm25_label = Label(top, text="PM 2.5: ")
         pm25_label.grid(column=1, row=3)
 
-        pm_25_entry = Entry(top, width=25)
-        pm_25_entry.grid(column=2, row=3)
+        self.pm_25_entry = Entry(top, width=25)
+        self.pm_25_entry.grid(column=2, row=3)
 
-        cancer_data_label = Label(top, text="Cancer Data: ")
+        cancer_data_label = Label(top, text="Lung Cancer Cases: ")
         cancer_data_label.grid(column=1, row=4)
 
-        cancer_data_entry = Entry(top, width=25)
-        cancer_data_entry.grid(column=2, row=4)
+        self.cancer_data_entry = Entry(top, width=25)
+        self.cancer_data_entry.grid(column=2, row=4)
 
-        sumbit_button = Button(top, text="Submit")
+        sumbit_button = Button(top, text="Submit", command=self.add_data)
         sumbit_button.grid(column=1, row=5)
         top.mainloop()  # mainloop() ensures that the program runs, without it the program won't open
+
+    def add_data(self):
+        try:   
+            LungCancerCursor = self.LungCancerConnection.cursor()
+            AirPollutionCursor = self.AirPollutionConnection.cursor() 
+
+            city = self.city_entry.get()   # get city
+            date_str = self.date.get_date() # get date
+            date_obj = datetime.strptime(date_str, '%m/%d/%y')  # create the format for SQL Server
+            formatted_date = date_obj.strftime('%Y-%m-%d')  # finally format the date
+            pm25 = self.pm_25_entry.get()
+
+            query = "INSERT INTO BatonRouge (City, Date, PM25) VALUES (?, ?, ?)"  # corrected the query syntax
+            AirPollutionCursor.execute(query, (city, formatted_date, pm25))  # added comma to separate query and tuple
+            self.AirPollutionConnection.commit()
+
+            #TODO Add way to add Cancer #'s to db
+
+            print("New Data added successfully")
+        except Exception as e:
+            print("Error adding new data:", e)
+
 
 if __name__ == "__main__":
     app = LouisianaMapApp() # tkinter requires this statement 
