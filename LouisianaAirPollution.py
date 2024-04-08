@@ -7,11 +7,12 @@ from tkinter import ttk
 from tkinter import messagebox
 from datetime import datetime
 
-class LoginPage(tk.Tk):
+class LoginPage(tk.Tk): # login page
     def __init__(self):
         super().__init__()
         # Update the window to calculate its width and height
         self.update_idletasks()
+        self.title("Login")
 
         # Calculate the center coordinates relative to the screen
         x = (self.winfo_screenwidth() - self.winfo_reqwidth()) / 2
@@ -100,9 +101,10 @@ class LouisianaMapApp(tk.Tk):
         self.map_widget.grid(column=3, row=2, padx=(120,10), pady=(50, 10), rowspan=5, columnspan=5, sticky="SE")
         self.map_widget.set_position(30.9843, -91.9623)
         self.map_widget.set_zoom(7)
+        self.map_widget.add_left_click_map_command(self.left_click_event)
 
-        if self.admin:
-            self.add_data_widget = tk.Button(self, text="Add More Data", command=self.open_new_data_window)
+        if self.admin:  # if user = admin, add the add more data
+            self.add_data_widget = tk.Button(self, text="Add Data", command=self.open_new_data_window)
             self.add_data_widget.grid(column=2, row=4, sticky="W")
 
         self.output_label = tk.Label(self, text="Output:")
@@ -230,6 +232,43 @@ class LouisianaMapApp(tk.Tk):
                 print("No Cancer Rate Data found")
         else:
             print("No Cancer Rate Data found")
+
+    def left_click_event(self, coords):
+        print("Left click event with coordinates:", coords[0], coords[1])
+        
+        cities = {
+            "Alexandria": {"latitude": (31.2756, 31.3718), "longitude": (-92.5373, -92.4181)},
+            "Baton Rouge": {"latitude": (30.3798, 30.5583), "longitude": (-91.2811, -91.0627)},
+            "Chalmette/Vista": {"latitude": (29.9462, 29.9638), "longitude": (-89.9599, -89.9447)},
+            "Geismar": {"latitude": (30.1895, 30.2374), "longitude": (-91.0059, -90.9646)},
+            "Hammond1": {"latitude": (30.5044, 30.5649), "longitude": (-90.5121, -90.4418)},
+            "Hammond2": {"latitude": (30.493, 30.532), "longitude": (-90.5032, -90.4431)},
+            "Houma": {"latitude": (29.5417, 29.6516), "longitude": (-90.8129, -90.6942)},
+            "New Orleans": {"latitude": (29.9499, 30.081), "longitude": (-90.179, -90.0378)},
+            "Kenner": {"latitude": (29.9831, 30.0384), "longitude": (-90.2585, -90.2146)},
+            "Lafayette": {"latitude": (30.0941, 30.2815), "longitude": (-92.1014, -91.8371)},
+            "Marrero": {"latitude": (29.8841, 29.915), "longitude": (-90.168, -90.0867)},
+            "Monroe": {"latitude": (32.4571, 32.5591), "longitude": (-92.0955, -92.0217)},
+            "PortAllen": {"latitude": (30.4364, 30.4992), "longitude": (-91.2679, -91.2082)},
+            "Shreveport": {"latitude": (32.4543, 32.7006), "longitude": (-94.0417, -93.7152)},
+            "Vinton": {"latitude": (30.1507, 30.2249), "longitude": (-93.5337, -93.4488)}
+        }
+        
+        clicked_city = None
+        
+        for city, values in cities.items():
+            lat_range = values["latitude"]
+            lon_range = values["longitude"]
+            if lat_range[0] <= coords[0] <= lat_range[1] and lon_range[0] <= coords[1] <= lon_range[1]:
+                clicked_city = city
+                break
+        
+        if clicked_city:
+            self.input_entry.delete(0, tk.END)
+            self.input_entry.insert(0, clicked_city)
+        else:
+            print("Clicked outside of any specified city")
+
 
     def open_new_data_window(self): 
         top = Toplevel()
