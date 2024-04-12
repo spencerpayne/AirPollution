@@ -102,7 +102,10 @@ class LouisianaMapApp(tk.Tk):   # our main window
         self.add_submit_button = tk.Button(self, text="Search", command=self.on_user_input)
         self.add_submit_button.grid(column=1, row=4, sticky="E")
 
-        self.map_widget = tkintermapview.TkinterMapView(self, width=400, height=400, corner_radius=5)
+        self.add_clear_button = tk.Button(self, text="Clear All", command=self.clear_input)
+        self.add_clear_button.grid(column=3, row=4, sticky="W")
+
+        self.map_widget = tkintermapview.TkinterMapView(self, width=500, height=500, corner_radius=5)
         self.map_widget.grid(column=3, row=2, padx=(120,10), pady=(50, 10), rowspan=5, columnspan=5, sticky="SE")
         self.map_widget.set_position(30.9843, -91.9623)
         self.map_widget.set_zoom(7)
@@ -191,6 +194,13 @@ class LouisianaMapApp(tk.Tk):   # our main window
                 print("Error fetching Lung Cancer Rates", e)
                 return None
 
+    def clear_input(self):
+        for widget in self.winfo_children():
+            # Check if the widget is an entry box
+            if isinstance(widget, tk.Entry):
+                # Clear the entry box
+                widget.delete(0, 'end')
+
     def loadCities(self):
         cursor = self.AirPollutionConnection.cursor()
         cursor.execute("SELECT DISTINCT City FROM BatonRouge2")
@@ -203,8 +213,7 @@ class LouisianaMapApp(tk.Tk):   # our main window
         date_obj = datetime.strptime(date_str, '%m/%d/%y')
         formatted_date = date_obj.strftime('%Y-%m-%d')
         formatted_date2 = date_obj.strftime('%Y')
-
-        # Add similar conditions for other cities
+        coords = self.fetch_coordinates(city)
 
         air_quality_data = self.fetch_air_quality_data(city, formatted_date, formatted_date)
         print("Air quality data:", air_quality_data)
@@ -214,13 +223,6 @@ class LouisianaMapApp(tk.Tk):   # our main window
                 self.air_quality_labels["PM 2.5"].delete(0, tk.END)
                 self.air_quality_labels["PM 2.5"].insert(0, air_quality_data[0])
                 print("Setting PM 2.5 marker...")
-                # Fetch coordinates for the city
-                coords = self.fetch_coordinates(city)
-                if coords is not None:
-                    marker_text = f"PM 2.5: {air_quality_data[0]}"
-                    self.update_marker(coords, marker_text)
-                else:
-                    print("Coordinates not found for the city.")
             else:
                 print("No air quality data found for the provided city.")
         else:
@@ -234,28 +236,39 @@ class LouisianaMapApp(tk.Tk):   # our main window
                 self.air_quality_labels["Lung Cancer Cases"].delete(0, tk.END)
                 self.air_quality_labels["Lung Cancer Cases"].insert(0, lung_cancer_data[0])
                 print("Setting lung cancer marker...")
-                # Fetch coordinates for the city
-                coords = self.fetch_coordinates(city)
-                if coords is not None:
-                    marker_text = f"Lung Cancer: {lung_cancer_data[0]}"
-                    self.update_marker(coords, marker_text)
-                else:
-                    print("Coordinates not found for the city.")
             else:
                 print("No Cancer Rate Data found")
         else:
             print("No Cancer Rate Data found")
 
-    def update_marker(self, coords, text):
+        self.update_marker(coords, city, formatted_date, air_quality_data, lung_cancer_data)
+
+
+
+    def update_marker(self, coords, city, date, air_quality_data, lung_cancer_data):
         # Check if marker exists for the coordinates
         if coords in self.marker_dict:
-            # If marker exists, update its text
-            existing_marker = self.marker_dict[coords]
-            existing_text = existing_marker.text  # Access the 'text' attribute directly
-            existing_marker.set_text(existing_text + f"\n{text}")
-        else:
-            # If marker doesn't exist, create a new one
-            self.marker_dict[coords] = self.map_widget.set_marker(coords[0], coords[1], text=text)
+            # If marker exists, check if the new city is the same as the city of the existing marker
+            existing_marker_city = self.marker_dict[coords]["city"]
+            if existing_marker_city == city:
+                # If the cities match, update the text of the existing marker with new data
+                marker_text = f"City: {city}, Date: {date}\nPM 2.5: {air_quality_data}\nLung Cancer Cases: {lung_cancer_data}"
+                self.marker_dict[coords]["marker"].set_text(marker_text)
+                return
+            else:
+                # If the cities don't match, remove the previous marker
+                self.map_widget.remove_marker(self.marker_dict[coords]["marker"])
+                del self.marker_dict[coords]
+
+        # Create a new marker with updated information
+        marker_text = f"City: {city}\nDate: {date}\nPM 2.5: {air_quality_data}\nLung Cancer Cases: {lung_cancer_data}"
+        new_marker = self.map_widget.set_marker(coords[0], coords[1], text=marker_text, font=('Arial', 10))
+        self.marker_dict[coords] = {"marker": new_marker, "city": city}
+
+
+
+
+
 
 
 
