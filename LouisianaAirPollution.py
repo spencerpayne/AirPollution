@@ -10,6 +10,7 @@ from datetime import datetime
 class LoginPage(tk.Tk): # login page
     def __init__(self):
         super().__init__()
+        
         # Update the window to calculate its width and height
         self.update_idletasks()
         self.title("Login")
@@ -41,23 +42,24 @@ class LoginPage(tk.Tk): # login page
         username = self.username_entry.get()
         password = self.password_entry.get()
 
-        # Replace the condition with your authentication logic
+
         if username == "admin" and password == "password":
             messagebox.showinfo("Login Successful", "Welcome Admin!")
             self.destroy()  # Close the login window
-            app = LouisianaMapApp(admin=True)
+            app = LouisianaMapApp(admin=True)   # give admin priviliges
             app.mainloop()
         elif username == "guest" and password == "guestpassword":
             messagebox.showinfo("Login Successful", "Welcome Guest!")
             self.destroy()  # Close the login window
-            app = LouisianaMapApp(admin=False)
+            app = LouisianaMapApp(admin=False) # restrict admin privileges
             app.mainloop()
         else:
             messagebox.showerror("Login Failed", "Invalid username or password")
 
-class LouisianaMapApp(tk.Tk):
+class LouisianaMapApp(tk.Tk):   # our main window
     def __init__(self, admin=False):
         super().__init__()
+        self.marker_dict = {}
         
         self.title("Air Quality of Louisiana")
         self.geometry("1300x650")
@@ -94,6 +96,9 @@ class LouisianaMapApp(tk.Tk):
         self.lowest_first_sort = tk.Radiobutton(self, text="Lowest first", value="lowest")
         self.lowest_first_sort.grid(column=3, row=3, sticky="NW")
 
+        self.sort_search_button = tk.Button(self, text="Search by sort", command=self.sortSearch)
+        self.sort_search_button.grid(column=4, row=1, sticky="W")
+
         self.add_submit_button = tk.Button(self, text="Search", command=self.on_user_input)
         self.add_submit_button.grid(column=1, row=4, sticky="E")
 
@@ -120,6 +125,7 @@ class LouisianaMapApp(tk.Tk):
             self.air_quality_labels[label_text] = entry
 
         try:
+            # our 3 databases
             AirPollutionDB = {
                 'server': 'localhost',
                 'database': 'AirPollution2',
@@ -144,6 +150,7 @@ class LouisianaMapApp(tk.Tk):
                 'driver': '{ODBC Driver 18 for SQL Server}'
             }
 
+            # connect to all 3 databases
             self.AirPollutionConnection = pyodbc.connect(
                 f"DRIVER={AirPollutionDB['driver']};SERVER={AirPollutionDB['server']};DATABASE={AirPollutionDB['database']};"
                 f"UID={AirPollutionDB['username']};PWD={AirPollutionDB['password']};TrustServerCertificate=yes"
@@ -165,7 +172,7 @@ class LouisianaMapApp(tk.Tk):
     def fetch_air_quality_data(self, city, lon, date):
         try:
             cursor = self.AirPollutionConnection.cursor()
-            query = " SELECT PM25 FROM BatonRouge WHERE Date = ? AND City = ?"
+            query = "SELECT PM25 FROM BatonRouge2 WHERE Date = ? AND City = ?"
             cursor.execute(query, (date, city))
             rows = cursor.fetchall()
             return rows[0] if rows else None
@@ -176,7 +183,7 @@ class LouisianaMapApp(tk.Tk):
     def fetchLungCancerRates(self, city, lon, date):
         try:
             cursor = self.LungCancerConnection.cursor()
-            query = "SELECT CountOfCases FROM LungCancerRates WHERE Year = ? AND Parish = ?"
+            query = "SELECT Count FROM LungCancerRates2 WHERE Year = ? AND Parish = ?"
             cursor.execute(query, (date, city))
             rows = cursor.fetchall()
             return rows[0] if rows else None
@@ -186,7 +193,7 @@ class LouisianaMapApp(tk.Tk):
 
     def loadCities(self):
         cursor = self.AirPollutionConnection.cursor()
-        cursor.execute("SELECT DISTINCT City FROM BatonRouge")
+        cursor.execute("SELECT DISTINCT City FROM BatonRouge2")
         city = cursor.fetchall()
         print("Fetched cities:", city)
 
@@ -197,41 +204,75 @@ class LouisianaMapApp(tk.Tk):
         formatted_date = date_obj.strftime('%Y-%m-%d')
         formatted_date2 = date_obj.strftime('%Y')
 
-        if city == "Shreveport":
-            self.map_widget.set_position(32.5252, -93.7502, marker=True)
-            self.map_widget.set_zoom(7)
-        elif city == "Baton Rouge":
-            self.map_widget.set_position(30.4515, -91.1871, marker=True)
-            self.map_widget.set_zoom(7)
-        elif city == "Lafayette":
-            self.map_widget.set_position(30.2241, -92.0198, marker=True)
-            self.map_widget.set_zoom(7)
-        elif city == "Bossier City":
-            self.map_widget.set_position(32.5160, -93.7321, marker=True)
-            self.map_widget.set_zoom(7)
-        elif city == "New Orleans":
-            self.map_widget.set_position(29.9511, -90.0715, marker=True)
-            self.map_widget.set_zoom(7)
+        # Add similar conditions for other cities
 
         air_quality_data = self.fetch_air_quality_data(city, formatted_date, formatted_date)
+        print("Air quality data:", air_quality_data)
+
         if air_quality_data is not None:
             if air_quality_data:
                 self.air_quality_labels["PM 2.5"].delete(0, tk.END)
                 self.air_quality_labels["PM 2.5"].insert(0, air_quality_data[0])
+                print("Setting PM 2.5 marker...")
+                # Fetch coordinates for the city
+                coords = self.fetch_coordinates(city)
+                if coords is not None:
+                    marker_text = f"PM 2.5: {air_quality_data[0]}"
+                    self.update_marker(coords, marker_text)
+                else:
+                    print("Coordinates not found for the city.")
             else:
                 print("No air quality data found for the provided city.")
         else:
             print("No air quality data found for the provided city.")
 
         lung_cancer_data = self.fetchLungCancerRates(city, formatted_date2, formatted_date2)
+        print("Lung cancer data:", lung_cancer_data)
+
         if lung_cancer_data is not None:
             if lung_cancer_data:
                 self.air_quality_labels["Lung Cancer Cases"].delete(0, tk.END)
                 self.air_quality_labels["Lung Cancer Cases"].insert(0, lung_cancer_data[0])
+                print("Setting lung cancer marker...")
+                # Fetch coordinates for the city
+                coords = self.fetch_coordinates(city)
+                if coords is not None:
+                    marker_text = f"Lung Cancer: {lung_cancer_data[0]}"
+                    self.update_marker(coords, marker_text)
+                else:
+                    print("Coordinates not found for the city.")
             else:
                 print("No Cancer Rate Data found")
         else:
             print("No Cancer Rate Data found")
+
+    def update_marker(self, coords, text):
+        # Check if marker exists for the coordinates
+        if coords in self.marker_dict:
+            # If marker exists, update its text
+            existing_marker = self.marker_dict[coords]
+            existing_text = existing_marker.text  # Access the 'text' attribute directly
+            existing_marker.set_text(existing_text + f"\n{text}")
+        else:
+            # If marker doesn't exist, create a new one
+            self.marker_dict[coords] = self.map_widget.set_marker(coords[0], coords[1], text=text)
+
+
+
+
+    def fetch_coordinates(self, city):
+        cities = {
+            "Alexandria": (31.332153069519233, -92.478657421875),
+            "Baton Rouge": (30.4515, -91.1871),
+            "Lafayette": (30.2241, -92.0198),
+            "Shreveport": (32.5252, -93.7502)
+            # Add coordinates for other cities
+        }
+        
+        return cities.get(city)  # Return coordinates for the specified city if found
+
+
+
 
     def left_click_event(self, coords):
         print("Left click event with coordinates:", coords[0], coords[1])
@@ -268,6 +309,11 @@ class LouisianaMapApp(tk.Tk):
             self.input_entry.insert(0, clicked_city)
         else:
             print("Clicked outside of any specified city")
+
+    def sortSearch(self):
+        cursor = self.LungCancerConnection.cursor()
+
+        
 
 
     def open_new_data_window(self): 
@@ -314,7 +360,7 @@ class LouisianaMapApp(tk.Tk):
             formatted_date = date_obj.strftime('%Y-%m-%d')  # finally format the date
             pm25 = self.pm_25_entry.get()
 
-            query = "INSERT INTO BatonRouge (City, Date, PM25) VALUES (?, ?, ?)"  # corrected the query syntax
+            query = "INSERT INTO BatonRouge2 (City, Date, PM25) VALUES (?, ?, ?)"  # corrected the query syntax
             AirPollutionCursor.execute(query, (city, formatted_date, pm25))  # added comma to separate query and tuple
             self.AirPollutionConnection.commit()
 
