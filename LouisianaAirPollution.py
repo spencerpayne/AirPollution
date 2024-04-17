@@ -42,7 +42,7 @@ class LoginPage(tk.Tk): # login page
         username = self.username_entry.get()
         password = self.password_entry.get()
 
-
+    #TODO make it login to database, currently it uses a "fake" login
         if username == "admin" and password == "password":
             messagebox.showinfo("Login Successful", "Welcome Admin!")
             self.destroy()  # Close the login window
@@ -364,6 +364,7 @@ class LouisianaMapApp(tk.Tk):   # our main window
 
     def add_data(self):
         try:   
+            #TODO use sql function
             LungCancerCursor = self.LungCancerConnection.cursor()
             AirPollutionCursor = self.AirPollutionConnection.cursor() 
 
