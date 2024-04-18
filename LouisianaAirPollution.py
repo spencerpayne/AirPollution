@@ -243,8 +243,6 @@ class LouisianaMapApp(tk.Tk):   # our main window
 
         self.update_marker(coords, city, formatted_date, air_quality_data, lung_cancer_data)
 
-
-
     def update_marker(self, coords, city, date, air_quality_data, lung_cancer_data):
         # Check if marker exists for the coordinates
         if coords in self.marker_dict:
@@ -264,14 +262,6 @@ class LouisianaMapApp(tk.Tk):   # our main window
         marker_text = f"City: {city}\nDate: {date}\nPM 2.5: {air_quality_data}\nLung Cancer Cases: {lung_cancer_data}"
         new_marker = self.map_widget.set_marker(coords[0], coords[1], text=marker_text, font=('Arial', 10))
         self.marker_dict[coords] = {"marker": new_marker, "city": city}
-
-
-
-
-
-
-
-
 
     def fetch_coordinates(self, city):
         cities = {
@@ -325,9 +315,7 @@ class LouisianaMapApp(tk.Tk):   # our main window
 
     def sortSearch(self):
         cursor = self.LungCancerConnection.cursor()
-
-        
-
+        #TODO sort search
 
     def open_new_data_window(self): 
         top = Toplevel()
@@ -363,26 +351,23 @@ class LouisianaMapApp(tk.Tk):   # our main window
         top.mainloop()
 
     def add_data(self):
-        try:   
-            #TODO use sql function
-            LungCancerCursor = self.LungCancerConnection.cursor()
-            AirPollutionCursor = self.AirPollutionConnection.cursor() 
-
-            city = self.city_entry.get()   # get city
-            date_str = self.date.get_date() # get date
-            date_obj = datetime.strptime(date_str, '%m/%d/%y')  # create the format for SQL Server
-            formatted_date = date_obj.strftime('%Y-%m-%d')  # finally format the date
+        try:
+            # Get data from the entry fields
+            city = self.city_entry.get()
+            date_str = self.date.get_date()
+            date_obj = datetime.strptime(date_str, '%m/%d/%y')
+            formatted_date = date_obj.strftime('%Y-%m-%d')
             pm25 = self.pm_25_entry.get()
 
-            query = "INSERT INTO BatonRouge2 (City, Date, PM25) VALUES (?, ?, ?)"  # corrected the query syntax
-            AirPollutionCursor.execute(query, (city, formatted_date, pm25))  # added comma to separate query and tuple
+            # Call the stored procedure
+            AirPollutionCursor = self.AirPollutionConnection.cursor()
+            AirPollutionCursor.execute("{CALL Insert_In_Air_Pollution_DB (?, ?, ?)}", (formatted_date, city, pm25))
             self.AirPollutionConnection.commit()
-
-            #TODO Add way to add Cancer #'s to db
 
             print("New Data added successfully")
         except Exception as e:
             print("Error adding new data:", e)
+
 
 if __name__ == "__main__":
     login_page = LoginPage()
