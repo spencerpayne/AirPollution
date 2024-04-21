@@ -88,19 +88,7 @@ class LouisianaMapApp(tk.Tk):   # our main window
         self.year_combobox = ttk.Combobox(self, textvariable=self.selected_year, state="readonly", values=years)
         self.year_combobox.grid(column=3, row=1, sticky="W")
 
-        self.sort_label = tk.Label(self, text="Sort: ")
-        self.sort_label.grid(column=2, row=2, sticky="SE")
-
-        self.highest_first_sort = tk.Radiobutton(self, text="Highest First", value="highest")
-        self.highest_first_sort.grid(column=3, row=2, sticky="SW")
-
-        self.lowest_first_sort = tk.Radiobutton(self, text="Lowest first", value="lowest")
-        self.lowest_first_sort.grid(column=3, row=3, sticky="NW")
-
-        self.sort_search_button = tk.Button(self, text="Search by sort", command=self.sortSearch)
-        self.sort_search_button.grid(column=4, row=0, sticky="W")
-
-        self.select_year_button = tk.Button(self, text="Select Year", command=self.select_year)
+        self.select_year_button = tk.Button(self, text="Search Lung Cancer Rates by Year", command=self.select_year)
         self.select_year_button.grid(column=4, row=1, sticky="W")
 
         self.add_submit_button = tk.Button(self, text="Search with Full Date and City", command=self.on_user_input)
@@ -129,7 +117,7 @@ class LouisianaMapApp(tk.Tk):   # our main window
         self.output_label.grid(column=2, row=5, sticky="SW")
 
         self.air_quality_labels = {}
-        labels = ["PM 2.5", "Lung Cancer Cases", "Highest Cancer City"]
+        labels = ["PM 2.5", "Lung Cancer Cases", "Highest Lung Cancer Rate", "Lowest Lung Cancer Rate"]
         for i, label_text in enumerate(labels):
             label = tk.Label(self, text=f"{label_text}")
             label.grid(column=1, row=6+i*30, sticky="SE")
@@ -392,6 +380,7 @@ class LouisianaMapApp(tk.Tk):   # our main window
         selected_year = self.selected_year.get()
         if selected_year:
             self.show_highest_cancer_city(selected_year)
+            self.show_lowest_cancer_city(selected_year)
         else:
             messagebox.showerror("Error", "Please select a year first.")
 
@@ -413,12 +402,36 @@ class LouisianaMapApp(tk.Tk):   # our main window
 
             if result:
                 city, count = result
-                self.air_quality_labels["Highest Cancer City"].delete(0, tk.END)
-                self.air_quality_labels["Highest Cancer City"].insert(0, f"{year}: {city} ({count} cases)")
+                self.air_quality_labels["Highest Lung Cancer Rate"].delete(0, tk.END)
+                self.air_quality_labels["Highest Lung Cancer Rate"].insert(0, f"{year}: {city} ({count} cases)")
             else:
-                self.air_quality_labels["Highest Cancer City"].delete(0, tk.END)
-                self.air_quality_labels["Highest Cancer City"].insert(0, f"No data found for {year}.")
+                self.air_quality_labels["Highest Lung Cancer Rate"].delete(0, tk.END)
+                self.air_quality_labels["Highest Lung Cancer Rate"].insert(0, f"No data found for {year}.")
+        except Exception as e:
+            messagebox.showerror("Error",f"{e}")
+    def show_lowest_cancer_city(self, year):
+        try:
+            cursor = self.LungCancerConnection.cursor()
 
+            # Construct the SQL query to fetch the city with the lowest count of lung cancer cases for the given year
+            cities_list = ", ".join([f"'{city}'" for city in self.cities])  # Construct the list of cities
+            query = f"""
+            SELECT TOP 1 Parish, Count 
+            FROM LungCancerRates3 
+            WHERE Year = ? AND Parish IN ({cities_list}) 
+            GROUP BY Parish, Count 
+            ORDER BY Count ASC
+            """
+            cursor.execute(query, (year,))
+            result = cursor.fetchone()
+
+            if result:
+                city, count = result
+                self.air_quality_labels["Lowest Lung Cancer Rate"].delete(0, tk.END)
+                self.air_quality_labels["Lowest Lung Cancer Rate"].insert(0, f"{year}: {city} ({count} cases)")
+            else:
+                self.air_quality_labels["Lowest Lung Cancer Rate"].delete(0, tk.END)
+                self.air_quality_labels["Lowest Lung Cancer Rate"].insert(0, f"No data found for {year}.")
         except Exception as e:
             print("Error fetching data:", e)
             messagebox.showerror("Error", f"An error occurred: {e}")
