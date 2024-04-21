@@ -7,9 +7,10 @@ from tkinter import ttk
 from tkinter import messagebox
 from datetime import datetime
 
-class LoginPage(tk.Tk): # login page
+class LoginPage(tk.Tk):
     def __init__(self):
         super().__init__()
+        self.cities = ["Shreveport", "Alexandria", "Monroe", "BatonRouge", "Hammond", "Houma", "Chalmette", "Geismar", "Kenner", "Lafayette", "Marrero", "PortAllen", "Vinton", "NewOrleans"]
         
         # Update the window to calculate its width and height
         self.update_idletasks()
@@ -46,19 +47,20 @@ class LoginPage(tk.Tk): # login page
         if username == "admin" and password == "password":
             messagebox.showinfo("Login Successful", "Welcome Admin!")
             self.destroy()  # Close the login window
-            app = LouisianaMapApp(admin=True)   # give admin priviliges
+            app = LouisianaMapApp(admin=True, cities=self.cities)   # give admin priviliges
             app.mainloop()
         elif username == "guest" and password == "guestpassword":
             messagebox.showinfo("Login Successful", "Welcome Guest!")
             self.destroy()  # Close the login window
-            app = LouisianaMapApp(admin=False) # restrict admin privileges
+            app = LouisianaMapApp(admin=False, cities=self.cities) # restrict admin privileges
             app.mainloop()
         else:
             messagebox.showerror("Login Failed", "Invalid username or password")
 
 class LouisianaMapApp(tk.Tk):   # our main window
-    def __init__(self, admin=False):
+    def __init__(self, admin=False, cities=None):
         super().__init__()
+        self.cities = cities if cities else []
         self.marker_dict = {}
         
         self.title("Air Quality of Louisiana")
@@ -96,7 +98,10 @@ class LouisianaMapApp(tk.Tk):   # our main window
         self.lowest_first_sort.grid(column=3, row=3, sticky="NW")
 
         self.sort_search_button = tk.Button(self, text="Search by sort", command=self.sortSearch)
-        self.sort_search_button.grid(column=4, row=1, sticky="W")
+        self.sort_search_button.grid(column=4, row=0, sticky="W")
+
+        self.select_year_button = tk.Button(self, text="Select Year", command=self.select_year)
+        self.select_year_button.grid(column=4, row=1, sticky="W")
 
         self.add_submit_button = tk.Button(self, text="Search with Full Date and City", command=self.on_user_input)
         self.add_submit_button.grid(column=1, row=4, sticky="W")
@@ -115,7 +120,6 @@ class LouisianaMapApp(tk.Tk):   # our main window
         self.map_widget.grid(column=3, row=2, padx=(120,10), pady=(50, 10), rowspan=5, columnspan=5, sticky="SE")
         self.map_widget.set_position(30.9843, -91.9623)
         self.map_widget.set_zoom(7)
-        self.map_widget.add_left_click_map_command(self.left_click_event)
 
         if self.admin:  # if user = admin, add the add more data
             self.add_data_widget = tk.Button(self, text="Add Data", command=self.open_new_data_window)
@@ -125,7 +129,7 @@ class LouisianaMapApp(tk.Tk):   # our main window
         self.output_label.grid(column=2, row=5, sticky="SW")
 
         self.air_quality_labels = {}
-        labels = ["PM 2.5", "Lung Cancer Cases", "City with highest/lowest rate: "]
+        labels = ["PM 2.5", "Lung Cancer Cases", "Highest Cancer City"]
         for i, label_text in enumerate(labels):
             label = tk.Label(self, text=f"{label_text}")
             label.grid(column=1, row=6+i*30, sticky="SE")
@@ -293,39 +297,6 @@ class LouisianaMapApp(tk.Tk):   # our main window
         }
         
         return cities.get(city)  # Return coordinates for the specified city if found
-
-
-
-
-    def left_click_event(self, coords):
-        print("Left click event with coordinates:", coords[0], coords[1])
-        
-        cities = {
-            "Alexandria": {"latitude": (31.2756, 31.3718), "longitude": (-92.5373, -92.4181)},
-            "BatonRouge": {"latitude": (30.3798, 30.5583), "longitude": (-91.2811, -91.0627)},
-            "Chalmette": {"latitude": (29.9462, 29.9638), "longitude": (-89.9599, -89.9447)},
-            "Geismar": {"latitude": (30.1895, 30.2374), "longitude": (-91.0059, -90.9646)},
-            "Hammond1": {"latitude": (30.5044, 30.5649), "longitude": (-90.5121, -90.4418)},
-            "Hammond2": {"latitude": (30.493, 30.532), "longitude": (-90.5032, -90.4431)},
-            "Houma": {"latitude": (29.5417, 29.6516), "longitude": (-90.8129, -90.6942)},
-            "NewOrleans": {"latitude": (29.9499, 30.081), "longitude": (-90.179, -90.0378)},
-            "Kenner": {"latitude": (29.9831, 30.0384), "longitude": (-90.2585, -90.2146)},
-            "Lafayette": {"latitude": (30.0941, 30.2815), "longitude": (-92.1014, -91.8371)},
-            "Marrero": {"latitude": (29.8841, 29.915), "longitude": (-90.168, -90.0867)},
-            "Monroe": {"latitude": (32.4571, 32.5591), "longitude": (-92.0955, -92.0217)},
-            "PortAllen": {"latitude": (30.4364, 30.4992), "longitude": (-91.2679, -91.2082)},
-            "Shreveport": {"latitude": (32.4543, 32.7006), "longitude": (-94.0417, -93.7152)},
-            "Vinton": {"latitude": (30.1507, 30.2249), "longitude": (-93.5337, -93.4488)}
-        }
-        
-        self.clicked_city = None
-        
-        for city, values in cities.items():
-            lat_range = values["latitude"]
-            lon_range = values["longitude"]
-            if lat_range[0] <= coords[0] <= lat_range[1] and lon_range[0] <= coords[1] <= lon_range[1]:
-                self.clicked_city = city
-                break
         
     def sortSearch(self):
         try:
@@ -416,6 +387,45 @@ class LouisianaMapApp(tk.Tk):   # our main window
 
         submit_button = Button(top, text="Submit", command=self.add_data)
         submit_button.grid(column=1, row=7)
+
+    def select_year(self):
+        selected_year = self.selected_year.get()
+        if selected_year:
+            self.show_highest_cancer_city(selected_year)
+        else:
+            messagebox.showerror("Error", "Please select a year first.")
+
+    def show_highest_cancer_city(self, year):
+        try:
+            cursor = self.LungCancerConnection.cursor()
+
+            # Construct the SQL query to fetch the city with the highest count of lung cancer cases for the given year
+            cities_list = ", ".join([f"'{city}'" for city in self.cities])  # Construct the list of cities
+            query = f"""
+            SELECT TOP 1 Parish, Count 
+            FROM LungCancerRates3 
+            WHERE Year = ? AND Parish IN ({cities_list}) 
+            GROUP BY Parish, Count 
+            ORDER BY Count DESC
+            """
+            cursor.execute(query, (year,))
+            result = cursor.fetchone()
+
+            if result:
+                city, count = result
+                self.air_quality_labels["Highest Cancer City"].delete(0, tk.END)
+                self.air_quality_labels["Highest Cancer City"].insert(0, f"{year}: {city} ({count} cases)")
+            else:
+                self.air_quality_labels["Highest Cancer City"].delete(0, tk.END)
+                self.air_quality_labels["Highest Cancer City"].insert(0, f"No data found for {year}.")
+
+        except Exception as e:
+            print("Error fetching data:", e)
+            messagebox.showerror("Error", f"An error occurred: {e}")
+
+
+
+
 
     def add_data(self):
         try:
