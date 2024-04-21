@@ -72,9 +72,6 @@ class LouisianaMapApp(tk.Tk):   # our main window
         self.input_label = tk.Label(self, text="Selected City:")
         self.input_label.grid(column=0, row=1, sticky="NW")
 
-        self.input_entry = tk.Entry(self, width=35)
-        self.input_entry.grid(column=1, row=1, sticky="NW")
-
         self.date_label = tk.Label(self, text="Date: ")
         self.date_label.grid(column=0, row=2, sticky="NW", pady=(100, 10))
 
@@ -84,8 +81,10 @@ class LouisianaMapApp(tk.Tk):   # our main window
         self.year_label = tk.Label(self, text="Year: ")
         self.year_label.grid(column=2, row=1, sticky="E")
 
-        self.year_entry = tk.Entry(self, width=35)
-        self.year_entry.grid(column=3, row=1, sticky="W")
+        years = list(range(2010, 2025))
+        self.selected_year = tk.StringVar()  # Variable to store the selected year
+        self.year_combobox = ttk.Combobox(self, textvariable=self.selected_year, state="readonly", values=years)
+        self.year_combobox.grid(column=3, row=1, sticky="W")
 
         self.sort_label = tk.Label(self, text="Sort: ")
         self.sort_label.grid(column=2, row=2, sticky="SE")
@@ -99,11 +98,18 @@ class LouisianaMapApp(tk.Tk):   # our main window
         self.sort_search_button = tk.Button(self, text="Search by sort", command=self.sortSearch)
         self.sort_search_button.grid(column=4, row=1, sticky="W")
 
-        self.add_submit_button = tk.Button(self, text="Search", command=self.on_user_input)
-        self.add_submit_button.grid(column=1, row=4, sticky="E")
+        self.add_submit_button = tk.Button(self, text="Search with Full Date and City", command=self.on_user_input)
+        self.add_submit_button.grid(column=1, row=4, sticky="W")
 
         self.add_clear_button = tk.Button(self, text="Clear All", command=self.clear_input)
         self.add_clear_button.grid(column=3, row=4, sticky="W")
+
+        self.city_label = tk.Label(self, text="Selected City:")
+        self.city_label.grid(column=0, row=1, sticky="NW")
+
+        self.selected_city = tk.StringVar()  # Variable to store the selected city
+        self.city_combobox = ttk.Combobox(self, textvariable=self.selected_city, state="readonly")
+        self.city_combobox.grid(column=1, row=1, sticky="NW")
 
         self.map_widget = tkintermapview.TkinterMapView(self, width=500, height=500, corner_radius=5)
         self.map_widget.grid(column=3, row=2, padx=(120,10), pady=(50, 10), rowspan=5, columnspan=5, sticky="SE")
@@ -175,7 +181,7 @@ class LouisianaMapApp(tk.Tk):   # our main window
     def fetch_air_quality_data(self, city, lon, date):
         try:
             cursor = self.AirPollutionConnection.cursor()
-            query = "SELECT PM25 FROM BatonRouge2 WHERE Date = ? AND City = ?"
+            query = "SELECT PM25 FROM BatonRouge WHERE Date = ? AND City = ?"
             cursor.execute(query, (date, city))
             rows = cursor.fetchall()
             return rows[0] if rows else None
@@ -186,7 +192,7 @@ class LouisianaMapApp(tk.Tk):   # our main window
     def fetchLungCancerRates(self, city, lon, date):
         try:
             cursor = self.LungCancerConnection.cursor()
-            query = "SELECT Count FROM LungCancerRates2 WHERE Year = ? AND Parish = ?"
+            query = "SELECT Count FROM LungCancerRates3 WHERE Year = ? AND Parish = ?"
             cursor.execute(query, (date, city))
             rows = cursor.fetchall()
             return rows[0] if rows else None
@@ -200,15 +206,20 @@ class LouisianaMapApp(tk.Tk):   # our main window
             if isinstance(widget, tk.Entry):
                 # Clear the entry box
                 widget.delete(0, 'end')
+            # Remove all markers from the map
+        for marker_info in self.marker_dict.values():
+            self.map_widget.delete(marker_info["marker"])
+
+            # Clear the marker dictionary
+        self.marker_dict = {}
 
     def loadCities(self):
-        cursor = self.AirPollutionConnection.cursor()
-        cursor.execute("SELECT DISTINCT City FROM BatonRouge2")
-        city = cursor.fetchall()
-        print("Fetched cities:", city)
+        cities = ["Shreveport", "Alexandria", "Monroe", "BatonRouge", "Hammond", "Houma", "Chalmette", "Geismar", "Kenner", "Lafayette", "Marrero", "PortAllen", "Vinton", "NewOrleans"]  # Add more cities as needed
+        self.city_combobox["values"] = cities
+        self.selected_city.set(cities[0])  # Set the default selected city
 
-    def on_user_input(self):    
-        city = self.input_entry.get()
+    def on_user_input(self):
+        city = self.selected_city.get()  # Get the selected city from the dropdown menu
         date_str = self.calendar.get_date()
         date_obj = datetime.strptime(date_str, '%m/%d/%y')
         formatted_date = date_obj.strftime('%Y-%m-%d')
@@ -266,10 +277,19 @@ class LouisianaMapApp(tk.Tk):   # our main window
     def fetch_coordinates(self, city):
         cities = {
             "Alexandria": (31.332153069519233, -92.478657421875),
-            "Baton Rouge": (30.4515, -91.1871),
+            "BatonRouge": (30.4515, -91.1871),
             "Lafayette": (30.2241, -92.0198),
-            "Shreveport": (32.5252, -93.7502)
-            # Add coordinates for other cities
+            "Shreveport": (32.5252, -93.7502),
+            "Vinton": (30.1911, -93.5814),
+            "Monroe": (32.5093, -92.1193),
+            "Hammond": (30.5044, -90.4612),
+            "Houma": (29.5958, -90.7195),
+            "Chalmette": (29.9466, -89.9792),
+            "Geismar": (30.2193, -91.0065),
+            "Kenner": (29.9941, -90.2417),
+            "Marrero": (29.8994, -90.1004),
+            "PortAllen": (30.4475, -91.2073),
+            "NewOrleans": (29.9511, -90.0715)
         }
         
         return cities.get(city)  # Return coordinates for the specified city if found
@@ -282,13 +302,13 @@ class LouisianaMapApp(tk.Tk):   # our main window
         
         cities = {
             "Alexandria": {"latitude": (31.2756, 31.3718), "longitude": (-92.5373, -92.4181)},
-            "Baton Rouge": {"latitude": (30.3798, 30.5583), "longitude": (-91.2811, -91.0627)},
-            "Chalmette/Vista": {"latitude": (29.9462, 29.9638), "longitude": (-89.9599, -89.9447)},
+            "BatonRouge": {"latitude": (30.3798, 30.5583), "longitude": (-91.2811, -91.0627)},
+            "Chalmette": {"latitude": (29.9462, 29.9638), "longitude": (-89.9599, -89.9447)},
             "Geismar": {"latitude": (30.1895, 30.2374), "longitude": (-91.0059, -90.9646)},
             "Hammond1": {"latitude": (30.5044, 30.5649), "longitude": (-90.5121, -90.4418)},
             "Hammond2": {"latitude": (30.493, 30.532), "longitude": (-90.5032, -90.4431)},
             "Houma": {"latitude": (29.5417, 29.6516), "longitude": (-90.8129, -90.6942)},
-            "New Orleans": {"latitude": (29.9499, 30.081), "longitude": (-90.179, -90.0378)},
+            "NewOrleans": {"latitude": (29.9499, 30.081), "longitude": (-90.179, -90.0378)},
             "Kenner": {"latitude": (29.9831, 30.0384), "longitude": (-90.2585, -90.2146)},
             "Lafayette": {"latitude": (30.0941, 30.2815), "longitude": (-92.1014, -91.8371)},
             "Marrero": {"latitude": (29.8841, 29.915), "longitude": (-90.168, -90.0867)},
@@ -298,35 +318,71 @@ class LouisianaMapApp(tk.Tk):   # our main window
             "Vinton": {"latitude": (30.1507, 30.2249), "longitude": (-93.5337, -93.4488)}
         }
         
-        clicked_city = None
+        self.clicked_city = None
         
         for city, values in cities.items():
             lat_range = values["latitude"]
             lon_range = values["longitude"]
             if lat_range[0] <= coords[0] <= lat_range[1] and lon_range[0] <= coords[1] <= lon_range[1]:
-                clicked_city = city
+                self.clicked_city = city
                 break
         
-        if clicked_city:
-            self.input_entry.delete(0, tk.END)
-            self.input_entry.insert(0, clicked_city)
-        else:
-            print("Clicked outside of any specified city")
-
     def sortSearch(self):
-        cursor = self.LungCancerConnection.cursor()
-        #TODO sort search
+        try:
+            cursor = self.LungCancerConnection.cursor()
 
-    def open_new_data_window(self): 
+            # Get the selected city and year from the dropdown menu and year entry
+            selected_city = self.selected_city.get()
+            selected_year = self.selected_year.get()
+
+            # Validate if the year entry is not empty and is a valid integer
+            if selected_year:
+                try:
+                    selected_year = int(selected_year)
+                except ValueError:
+                    messagebox.showerror("Error", "Please enter a valid year.")
+                    return
+
+            # Construct the SQL query based on whether the user entered a year or not
+            if selected_year:
+                query = "SELECT Count, Year FROM LungCancerRates3 WHERE Parish = ? AND Year = ?"
+                cursor.execute(query, (selected_city, selected_year))
+            else:
+                query = "SELECT Count, Year FROM LungCancerRates3 WHERE Parish = ?"
+                cursor.execute(query, (selected_city,))
+
+            result = cursor.fetchone()
+
+            if result:
+                count, year = result
+                messagebox.showinfo("Sort Search Result", f"The count of lung cancer cases in {selected_city} in {year} is {count}.")
+            else:
+                messagebox.showinfo("Sort Search Result", f"No lung cancer cases found for {selected_city} in {selected_year}.")
+
+        except Exception as e:
+            print("Error performing sort search:", e)
+
+
+    def open_new_data_window(self):
+        # Get the list of cities
+        cities = ["Shreveport", "Alexandria", "Monroe", "BatonRouge", "Hammond", "Houma", "Chalmette", "Geismar", "Kenner", "Lafayette", "Marrero", "PortAllen", "Vinton", "NewOrleans"]
+        
+        # Call the method to create the window, passing the list of cities
+        self.create_new_data_window(cities)
+
+    def create_new_data_window(self, cities): 
         top = Toplevel()
-        top.geometry("400x300")
+        top.geometry("400x400")
         top.title("Add New Data")
 
         city_label = Label(top, text="City: ")
         city_label.grid(column=1, row=1)
 
-        self.city_entry = Entry(top, width=25)
-        self.city_entry.grid(column=2, row=1)
+        # Extract city names from the cities list
+        city_names = cities
+        self.selected_city = tk.StringVar()  # Variable to store the selected city
+        self.city_combobox = ttk.Combobox(top, textvariable=self.selected_city, state="readonly", values=city_names)
+        self.city_combobox.grid(column=2, row=1, sticky="NW")
 
         date_label = Label(top, text="Date: ")
         date_label.grid(column=1, row=2)
@@ -346,27 +402,64 @@ class LouisianaMapApp(tk.Tk):   # our main window
         self.cancer_data_entry = Entry(top, width=25)
         self.cancer_data_entry.grid(column=2, row=4)
 
-        sumbit_button = Button(top, text="Submit", command=self.add_data)
-        sumbit_button.grid(column=1, row=5)
-        top.mainloop()
+        rate_label = Label(top, text="Rate: ")
+        rate_label.grid(column=1, row=5)
+
+        self.rate_entry = Entry(top, width=25)
+        self.rate_entry.grid(column=2, row=5)
+
+        population_label = Label(top, text="Population: ")
+        population_label.grid(column=1, row=6)
+
+        self.population_entry = Entry(top, width=25)
+        self.population_entry.grid(column=2, row=6)
+
+        submit_button = Button(top, text="Submit", command=self.add_data)
+        submit_button.grid(column=1, row=7)
 
     def add_data(self):
         try:
             # Get data from the entry fields
-            city = self.city_entry.get()
+            city = self.selected_city.get()
             date_str = self.date.get_date()
             date_obj = datetime.strptime(date_str, '%m/%d/%y')
             formatted_date = date_obj.strftime('%Y-%m-%d')
             pm25 = self.pm_25_entry.get()
+            lung_cancer_data = self.cancer_data_entry.get()
+            population = self.population_entry.get()
+            rate = self.rate_entry.get()
 
-            # Call the stored procedure
-            AirPollutionCursor = self.AirPollutionConnection.cursor()
-            AirPollutionCursor.execute("{CALL Insert_In_Air_Pollution_DB (?, ?, ?)}", (formatted_date, city, pm25))
-            self.AirPollutionConnection.commit()
+            # Check if pm25, lung_cancer_data, population, and rate can be converted to appropriate types
+            if pm25.isdigit() and lung_cancer_data.isdigit() and population.isdigit() and '.' in rate:
+                # Convert the values to appropriate types
+                pm25 = int(pm25)
+                lung_cancer_data = int(lung_cancer_data)
+                population = int(population)
+                rate = float(rate)
 
-            print("New Data added successfully")
+                # Extract the year from the date
+                year = date_obj.year
+
+                # Call the stored procedure
+                AirPollutionCursor = self.AirPollutionConnection.cursor()
+                AirPollutionCursor.execute("{CALL Insert_In_Air_Pollution_DB (?, ?, ?)}", (formatted_date, city, pm25))
+                self.AirPollutionConnection.commit()
+
+                # Insert lung cancer data
+                LungCancerCursor = self.LungCancerConnection.cursor()
+                LungCancerCursor.execute("{CALL Insert_In_Lung_Cancer_DB (?, ?, ?, ?, ?)}", (year, city, rate, lung_cancer_data, population))
+                self.LungCancerConnection.commit()
+
+                print("New Data added successfully")
+            else:
+                # Show error message if input is invalid
+                messagebox.showerror("Input Error", "Invalid input. Please enter valid integer values for PM 2.5, Lung Cancer Cases, and Population, and a valid float value for Rate.")
         except Exception as e:
-            print("Error adding new data:", e)
+            # Show error message for any other exception
+            messagebox.showerror("Error", f"Error adding new data: {e}")
+
+
+
 
 
 if __name__ == "__main__":
