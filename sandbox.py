@@ -1,17 +1,20 @@
-import tkinter as tk
-from tkinter import *
-import pyodbc
-import tkcalendar
-import tkintermapview
+import tkinter as tk    # gui
+from tkinter import *   
+import pyodbc   # our database connector
+import tkcalendar   # calendar
+import tkintermapview   # map
 from tkinter import ttk
 from tkinter import messagebox
 from datetime import datetime
 
+
 class LoginPage(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.cities = ["Shreveport", "Alexandria", "Monroe", "BatonRouge", "Hammond", "Houma", "Chalmette", "Geismar", "Kenner", "Lafayette", "Marrero", "PortAllen", "Vinton", "NewOrleans"]
-        
+        #   Creates a list of cities to load into the combobox
+        self.cities = ["Shreveport", "Alexandria", "Monroe", "BatonRouge", "Hammond", "Houma",
+                       "Chalmette", "Geismar", "Kenner", "Lafayette", "Marrero", "PortAllen", "Vinton", "NewOrleans"]
+
         # Update the window to calculate its width and height
         self.update_idletasks()
         self.title("Login")
@@ -37,13 +40,14 @@ class LoginPage(tk.Tk):
         self.password_entry.grid(row=1, column=1, padx=10, pady=10)
 
         self.login_button = ttk.Button(self, text="Login", command=self.login)
-        self.login_button.grid(row=2, column=0, columnspan=2, padx=10, pady=10, sticky="ew")
-
+        self.login_button.grid(row=2, column=0, columnspan=2,
+                               padx=10, pady=10, sticky="ew")
+    #   gets the user login, for example: sa, user, or Data analyst
     def login(self):
         username = self.username_entry.get()
         password = self.password_entry.get()
 
-        try:
+        try:    # then it puts the username and password into the connection string.
             AirPollutionDB = {
                 'server': 'localhost',
                 'database': 'AirPollutionLungCancerDB',
@@ -54,43 +58,49 @@ class LoginPage(tk.Tk):
 
             # Connect to the database using the provided credentials
             self.connection = pyodbc.connect(
-                f"DRIVER={AirPollutionDB['driver']};SERVER={AirPollutionDB['server']};DATABASE={AirPollutionDB['database']};"
-                f"UID={AirPollutionDB['username']};PWD={AirPollutionDB['password']};TrustServerCertificate=yes"
+                f"DRIVER={AirPollutionDB['driver']};SERVER={
+                    AirPollutionDB['server']};DATABASE={AirPollutionDB['database']};"
+                f"UID={AirPollutionDB['username']};PWD={
+                    AirPollutionDB['password']};TrustServerCertificate=yes"
             )
+            #   opens the application after authentication
             self.open_map_app()
 
         except Exception as e:
             print("Error authenticating user:", e)
-
+    # function to actually open the map app. it gets the user and password and actually uses them to log in.
     def open_map_app(self):
         # Retrieve username and password before destroying the window
         username = self.username_entry.get()
         password = self.password_entry.get()
-        
+
         # Destroy the login window
         self.destroy()
-        
-        try:
+
+        try:    # logs in with username and password
             # Open the main application window with the retrieved username and password
-            app = LouisianaMapApp(username=username, password=password, cities=self.cities)
+            app = LouisianaMapApp(
+                username=username, password=password, cities=self.cities)
             app.mainloop()
         except Exception as e:
-            messagebox.showerror("Error", f"An error occurred while opening the main application: {e}")
+            messagebox.showerror(
+                "Error", f"An error occurred while opening the main application: {e}")
 
+# main class with our map
 class LouisianaMapApp(tk.Tk):
     def __init__(self, username, password, admin=False, cities=None):
         super().__init__()
-        self.cities = cities if cities else []
+        self.cities = cities if cities else []  # populates the city combobox.
         self.marker_dict = {}
         self.username = username
-        if username == "sa":
-            admin=True;
+        if username == "sa":    # this adds the "add data" button, only if user 'sa' is logged in.
+            admin = True
         self.password = password
         self.connection = None  # Initialize the connection attribute
         self.admin = admin
 
         # Establish the database connection
-        self.connect_to_database()
+        self.connect_to_database()  # calls the connect to database function
 
         # Other initialization code remains unchanged
         self.title("Air Quality of Louisiana")
@@ -98,12 +108,12 @@ class LouisianaMapApp(tk.Tk):
 
         self.admin = admin
 
-        self.create_widgets()
+        self.create_widgets()   # calls the create widgets function
 
         # Call the loadCities method to populate the city combobox
         self.loadCities()
 
-    def connect_to_database(self):
+    def connect_to_database(self):  # we call the method again, this time to actually connect to the database
         try:
             AirPollutionDB = {
                 'server': 'localhost',
@@ -115,8 +125,10 @@ class LouisianaMapApp(tk.Tk):
 
             # Connect to the database using the provided credentials
             self.connection = pyodbc.connect(
-                f"DRIVER={AirPollutionDB['driver']};SERVER={AirPollutionDB['server']};DATABASE={AirPollutionDB['database']};"
-                f"UID={AirPollutionDB['username']};PWD={AirPollutionDB['password']};TrustServerCertificate=yes"
+                f"DRIVER={AirPollutionDB['driver']};SERVER={
+                    AirPollutionDB['server']};DATABASE={AirPollutionDB['database']};"
+                f"UID={AirPollutionDB['username']};PWD={
+                    AirPollutionDB['password']};TrustServerCertificate=yes"
             )
         except Exception as e:
             print("Error establishing database connection:", e)
@@ -126,54 +138,67 @@ class LouisianaMapApp(tk.Tk):
         self.date_label.grid(column=0, row=2, sticky="NW", pady=(100, 10))
 
         self.calendar = tkcalendar.Calendar(self, year=2024, month=3, day=22)
-        self.calendar.grid(column=1, row=2, rowspan=2, sticky="NW", pady=(100, 10))
+        self.calendar.grid(column=1, row=2, rowspan=2,
+                           sticky="NW", pady=(100, 10))
 
         self.year_label = tk.Label(self, text="Year: ")
         self.year_label.grid(column=2, row=1, sticky="E")
 
         years = list(range(2010, 2025))
         self.selected_year = tk.StringVar()  # Variable to store the selected year
-        self.year_combobox = ttk.Combobox(self, textvariable=self.selected_year, state="readonly", values=years)
+        self.year_combobox = ttk.Combobox(
+            self, textvariable=self.selected_year, state="readonly", values=years)
         self.year_combobox.grid(column=3, row=1, sticky="W")
 
-        self.select_year_button = tk.Button(self, text="Search Lung Cancer Rates by Year", command=self.select_year)
+        self.select_year_button = tk.Button(
+            self, text="Search Lung Cancer Rates by Year", command=self.select_year)
         self.select_year_button.grid(column=4, row=1, sticky="W")
 
-        self.add_submit_button = tk.Button(self, text="Search with Full Date and City", command=self.on_user_input)
+        self.add_submit_button = tk.Button(
+            self, text="Search with Full Date and City", command=self.on_user_input)
         self.add_submit_button.grid(column=1, row=4, sticky="W")
 
         self.sort_method_label = tk.Label(self, text="Sort Method:")
-        self.sort_method_label.grid(column=0, row=5, sticky="NE", padx=(10, 0), pady=(100, 10))
+        self.sort_method_label.grid(
+            column=0, row=5, sticky="NE", padx=(10, 0), pady=(100, 10))
 
         self.sort_methods = ["Highest", "Lowest", "Average"]
         self.selected_sort_method = tk.StringVar()
-        self.sort_method_combobox = ttk.Combobox(self, textvariable=self.selected_sort_method, state="readonly", values=self.sort_methods)
-        self.sort_method_combobox.grid(column=1, row=5, sticky="NW", pady=(100, 10))
+        self.sort_method_combobox = ttk.Combobox(
+            self, textvariable=self.selected_sort_method, state="readonly", values=self.sort_methods)
+        self.sort_method_combobox.grid(
+            column=1, row=5, sticky="NW", pady=(100, 10))
 
-        self.add_clear_button = tk.Button(self, text="Clear All", command=self.clear_input)
+        self.add_clear_button = tk.Button(
+            self, text="Clear All", command=self.clear_input)
         self.add_clear_button.grid(column=3, row=4, sticky="W")
 
         self.city_label = tk.Label(self, text="Selected City:")
         self.city_label.grid(column=0, row=1, sticky="NW")
 
         self.selected_city = tk.StringVar()  # Variable to store the selected city
-        self.city_combobox = ttk.Combobox(self, textvariable=self.selected_city, state="readonly")
+        self.city_combobox = ttk.Combobox(
+            self, textvariable=self.selected_city, state="readonly")
         self.city_combobox.grid(column=1, row=1, sticky="NW")
 
-        self.map_widget = tkintermapview.TkinterMapView(self, width=500, height=500, corner_radius=5)
-        self.map_widget.grid(column=3, row=2, padx=(120,10), pady=(50, 10), rowspan=5, columnspan=5, sticky="SE")
+        self.map_widget = tkintermapview.TkinterMapView(
+            self, width=500, height=500, corner_radius=5)
+        self.map_widget.grid(column=3, row=2, padx=(120, 10), pady=(
+            50, 10), rowspan=5, columnspan=5, sticky="SE")
         self.map_widget.set_position(30.9843, -91.9623)
         self.map_widget.set_zoom(7)
 
         if self.admin:  # if user = admin, add the add more data
-            self.add_data_widget = tk.Button(self, text="Add Data", command=self.open_new_data_window)
+            self.add_data_widget = tk.Button(
+                self, text="Add Data", command=self.open_new_data_window)
             self.add_data_widget.grid(column=2, row=4, sticky="W")
 
         self.output_label = tk.Label(self, text="Output:")
         self.output_label.grid(column=2, row=5, sticky="SW")
 
         self.air_quality_labels = {}
-        labels = ["PM 2.5", "Lung Cancer Cases", "Highest Lung Cancer Rate", "Lowest Lung Cancer Rate"]
+        labels = ["PM 2.5", "Lung Cancer Cases",
+                  "Highest Lung Cancer Rate", "Lowest Lung Cancer Rate"]
         for i, label_text in enumerate(labels):
             label = tk.Label(self, text=f"{label_text}")
             label.grid(column=1, row=6+i*30, sticky="SE")
@@ -216,7 +241,8 @@ class LouisianaMapApp(tk.Tk):
     def get_highest_lung_cancer_cases(self, year):
         try:
             cursor = self.connection.cursor()
-            cursor.execute("EXEC Highest_Lung_Cancer_Cases @Highest_Year=?, @Highest_City=?", (year, None))
+            cursor.execute(
+                "EXEC Highest_Lung_Cancer_Cases @Highest_Year=?, @Highest_City=?", (year, None))
             row = cursor.fetchone()
             return row
         except Exception as e:
@@ -226,7 +252,8 @@ class LouisianaMapApp(tk.Tk):
     def get_lowest_lung_cancer_cases(self, year):
         try:
             cursor = self.connection.cursor()
-            cursor.execute("EXEC Lowest_Lung_Cancer_Cases @Lowest_Year=?, @Lowest_City=?", (year, None))
+            cursor.execute(
+                "EXEC Lowest_Lung_Cancer_Cases @Lowest_Year=?, @Lowest_City=?", (year, None))
             row = cursor.fetchone()
             return row
         except Exception as e:
@@ -236,15 +263,14 @@ class LouisianaMapApp(tk.Tk):
     def get_average_lung_cancer_cases(self, year):
         try:
             cursor = self.connection.cursor()
-            cursor.execute("EXEC Average_Lung_Cancer_Cases @Given_Year=?", (year,))
+            cursor.execute(
+                "EXEC Average_Lung_Cancer_Cases @Given_Year=?", (year,))
             row = cursor.fetchone()
             return row
         except Exception as e:
             print("Error fetching average lung cancer cases:", e)
             return None
 
-
-        
     def clear_input(self):
         for widget in self.winfo_children():
             # Check if the widget is an entry box
@@ -260,14 +286,14 @@ class LouisianaMapApp(tk.Tk):
 
     def loadCities(self):
         try:
-            cities = ["Shreveport", "Alexandria", "Monroe", "BatonRouge", "Hammond", "Houma", "Chalmette", "Geismar", "Kenner", "Lafayette", "Marrero", "PortAllen", "Vinton", "NewOrleans"]
+            cities = ["Shreveport", "Alexandria", "Monroe", "BatonRouge", "Hammond", "Houma", "Chalmette",
+                      "Geismar", "Kenner", "Lafayette", "Marrero", "PortAllen", "Vinton", "NewOrleans"]
             print("Number of cities:", len(cities))
             self.city_combobox["values"] = cities
             self.selected_city.set(cities[0])  # Set the default selected city
         except Exception as e:
             print("Error in loadCities:", e)
 
-    
     def on_user_input(self):
         city = self.selected_city.get()
         date_str = self.calendar.get_date()
@@ -287,7 +313,8 @@ class LouisianaMapApp(tk.Tk):
 
         if air_quality_data is not None:
             if air_quality_data:
-                self.air_quality_labels["PM 2.5"].insert(tk.END, air_quality_data)
+                self.air_quality_labels["PM 2.5"].insert(
+                    tk.END, air_quality_data)
                 print("Setting PM 2.5 marker...")
             else:
                 print("No air quality data found for the provided city.")
@@ -300,17 +327,17 @@ class LouisianaMapApp(tk.Tk):
 
         if lung_cancer_data is not None:
             if lung_cancer_data:
-                self.air_quality_labels["Lung Cancer Cases"].insert(tk.END, lung_cancer_data)
+                self.air_quality_labels["Lung Cancer Cases"].insert(
+                    tk.END, lung_cancer_data)
                 print("Setting lung cancer marker...")
                 # Create a marker only if there is lung cancer data available
-                self.update_marker(coords, city, formatted_date, air_quality_data, lung_cancer_data)
+                self.update_marker(coords, city, formatted_date,
+                                   air_quality_data, lung_cancer_data)
             else:
                 print("No Cancer Rate Data found")
         else:
             print("No Cancer Rate Data found")
 
-
-    
     def update_marker(self, coords, city, date, air_quality_data, lung_cancer_data):
         print("Updating marker...")
         print("Coordinates:", coords)
@@ -327,20 +354,23 @@ class LouisianaMapApp(tk.Tk):
             if existing_marker_city == city:
                 print("City matches existing marker.")
                 # If the cities match, update the text of the existing marker with new data
-                marker_text = f"City: {city}, Date: {date}\nPM 2.5: {air_quality_data if air_quality_data else 'N/A'}\nLung Cancer Cases: {lung_cancer_data if lung_cancer_data else 'N/A'}"
+                marker_text = f"City: {city}, Date: {date}\nPM 2.5: {
+                    air_quality_data if air_quality_data else 'N/A'}\nLung Cancer Cases: {lung_cancer_data if lung_cancer_data else 'N/A'}"
                 self.marker_dict[coords]["marker"].set_text(marker_text)
                 return
             else:
                 print("City does not match existing marker. Removing previous marker...")
                 # If the cities don't match, remove the previous marker
-                self.map_widget.remove_marker(self.marker_dict[coords]["marker"])
+                self.map_widget.remove_marker(
+                    self.marker_dict[coords]["marker"])
                 del self.marker_dict[coords]
 
         print("Creating new marker...")
-        marker_text = f"City: {city}\nDate: {date}\nPM 2.5: {air_quality_data if air_quality_data else 'N/A'}\nLung Cancer Cases: {lung_cancer_data if lung_cancer_data else 'N/A'}"
-        new_marker = self.map_widget.set_marker(coords[0], coords[1], text=marker_text, font=('Arial', 10))
+        marker_text = f"City: {city}\nDate: {date}\nPM 2.5: {
+            air_quality_data if air_quality_data else 'N/A'}\nLung Cancer Cases: {lung_cancer_data if lung_cancer_data else 'N/A'}"
+        new_marker = self.map_widget.set_marker(
+            coords[0], coords[1], text=marker_text, font=('Arial', 10))
         self.marker_dict[coords] = {"marker": new_marker, "city": city}
-
 
     def fetch_coordinates(self, city):
         cities = {
@@ -360,14 +390,16 @@ class LouisianaMapApp(tk.Tk):
             "NewOrleans": (29.9511, -90.0715)
         }
 
-        return cities.get(city)  # Return coordinates for the specified city if found
-    
+        # Return coordinates for the specified city if found
+        return cities.get(city)
+
     def sortSearch(self):
         try:
             cursor = self.connection.cursor()
 
             # Get the selected parish and year from the dropdown menu and year entry
-            selected_parish = self.selected_city.get()  # Assuming the parish is selected from the city combobox
+            # Assuming the parish is selected from the city combobox
+            selected_parish = self.selected_city.get()
             selected_year = self.selected_year.get()
 
             # Validate if the year entry is not empty and is a valid integer
@@ -380,17 +412,21 @@ class LouisianaMapApp(tk.Tk):
 
             # Construct the SQL query based on whether the user entered a year or not
             if selected_year:
-                cursor.execute("EXEC Highest_Lung_Cancer_Cases @Highest_Year=?, @Highest_City=?", (selected_year, selected_parish))
+                cursor.execute(
+                    "EXEC Highest_Lung_Cancer_Cases @Highest_Year=?, @Highest_City=?", (selected_year, selected_parish))
             else:
-                cursor.execute("EXEC Highest_Lung_Cancer_Cases @Highest_City=?", (selected_parish,))
+                cursor.execute(
+                    "EXEC Highest_Lung_Cancer_Cases @Highest_City=?", (selected_parish,))
 
             result = cursor.fetchone()
 
             if result:
                 count, year = result
-                messagebox.showinfo("Sort Search Result", f"The count of lung cancer cases in {selected_parish} in {year} is {count}.")
+                messagebox.showinfo("Sort Search Result", f"The count of lung cancer cases in {
+                                    selected_parish} in {year} is {count}.")
             else:
-                messagebox.showinfo("Sort Search Result", f"No lung cancer cases found for {selected_parish} in {selected_year}.")
+                messagebox.showinfo("Sort Search Result", f"No lung cancer cases found for {
+                                    selected_parish} in {selected_year}.")
 
         except Exception as e:
             print("Error performing sort search:", e)
@@ -401,7 +437,6 @@ class LouisianaMapApp(tk.Tk):
             self.create_new_data_window(self.cities)
         except Exception as e:
             print("Error opening new data window:", e)
-
 
     def create_new_data_window(self, city_names):
         try:
@@ -415,7 +450,8 @@ class LouisianaMapApp(tk.Tk):
             # Extract city names from the cities list
             city_names = self.cities
             self.selected_city = tk.StringVar()  # Variable to store the selected city
-            self.city_combobox = ttk.Combobox(top, textvariable=self.selected_city, state="readonly", values=city_names)
+            self.city_combobox = ttk.Combobox(
+                top, textvariable=self.selected_city, state="readonly", values=city_names)
             self.city_combobox.grid(column=2, row=1, sticky="NW")
 
             date_label = Label(top, text="Date: ")
@@ -452,71 +488,89 @@ class LouisianaMapApp(tk.Tk):
             submit_button.grid(column=1, row=7)
         except Exception as e:
             print("Error creating new data window:", e)
-    
+
     def select_year(self):
         try:
             selected_year = self.selected_year.get()
             if selected_year:
-                highest_cases = self.get_highest_lung_cancer_cases(selected_year)
+                highest_cases = self.get_highest_lung_cancer_cases(
+                    selected_year)
                 lowest_cases = self.get_lowest_lung_cancer_cases(selected_year)
-                average_cases = self.get_average_lung_cancer_cases(selected_year)
+                average_cases = self.get_average_lung_cancer_cases(
+                    selected_year)
 
                 if highest_cases:
-                    messagebox.showinfo("Highest Lung Cancer Cases", f"The highest number of lung cancer cases occurred in {highest_cases[1]} in {highest_cases[0]} with {highest_cases[2]} cases.")
+                    messagebox.showinfo("Highest Lung Cancer Cases", f"The highest number of lung cancer cases occurred in {
+                                        highest_cases[1]} in {highest_cases[0]} with {highest_cases[2]} cases.")
                 else:
-                    messagebox.showinfo("Highest Lung Cancer Cases", f"No lung cancer cases found for the selected year.")
+                    messagebox.showinfo(
+                        "Highest Lung Cancer Cases", f"No lung cancer cases found for the selected year.")
 
                 if lowest_cases:
-                    messagebox.showinfo("Lowest Lung Cancer Cases", f"The lowest number of lung cancer cases occurred in {lowest_cases[1]} in {lowest_cases[0]} with {lowest_cases[2]} cases.")
+                    messagebox.showinfo("Lowest Lung Cancer Cases", f"The lowest number of lung cancer cases occurred in {
+                                        lowest_cases[1]} in {lowest_cases[0]} with {lowest_cases[2]} cases.")
                 else:
-                    messagebox.showinfo("Lowest Lung Cancer Cases", f"No lung cancer cases found for the selected year.")
+                    messagebox.showinfo(
+                        "Lowest Lung Cancer Cases", f"No lung cancer cases found for the selected year.")
 
                 if average_cases:
-                    messagebox.showinfo("Average Lung Cancer Cases", f"The average number of lung cancer cases for the selected year is {average_cases[0]} with an average PM 2.5 value of {average_cases[1]}.")
+                    messagebox.showinfo("Average Lung Cancer Cases", f"The average number of lung cancer cases for the selected year is {
+                                        average_cases[0]} with an average PM 2.5 value of {average_cases[1]}.")
                 else:
-                    messagebox.showinfo("Average Lung Cancer Cases", f"No lung cancer cases found for the selected year.")
+                    messagebox.showinfo(
+                        "Average Lung Cancer Cases", f"No lung cancer cases found for the selected year.")
             else:
                 messagebox.showerror("Error", "Please select a year first.")
         except Exception as e:
             print("Error selecting year:", e)
+
     def show_highest_cancer_city(self, year):
         try:
             cursor = self.connection.cursor()
 
             # Call the stored procedure to get the city with the highest count of lung cancer cases for the given year
-            cursor.execute("EXEC Highest_Lung_Cancer_Cases @Highest_Year OUTPUT, @Highest_City OUTPUT", (year, None, None))
+            cursor.execute(
+                "EXEC Highest_Lung_Cancer_Cases @Highest_Year OUTPUT, @Highest_City OUTPUT", (year, None, None))
             result = cursor.fetchone()
 
             if result:
                 highest_year, highest_city, pm25_reading, number_of_cases = result
-                self.air_quality_labels["Highest Lung Cancer Rate"].delete(0, tk.END)
-                self.air_quality_labels["Highest Lung Cancer Rate"].insert(0, f"{highest_year}: {highest_city} ({number_of_cases} cases)")
+                self.air_quality_labels["Highest Lung Cancer Rate"].delete(
+                    0, tk.END)
+                self.air_quality_labels["Highest Lung Cancer Rate"].insert(
+                    0, f"{highest_year}: {highest_city} ({number_of_cases} cases)")
             else:
-                self.air_quality_labels["Highest Lung Cancer Rate"].delete(0, tk.END)
-                self.air_quality_labels["Highest Lung Cancer Rate"].insert(0, f"No data found for {year}.")
+                self.air_quality_labels["Highest Lung Cancer Rate"].delete(
+                    0, tk.END)
+                self.air_quality_labels["Highest Lung Cancer Rate"].insert(
+                    0, f"No data found for {year}.")
         except Exception as e:
-            messagebox.showerror("Error", f"Error fetching highest cancer city: {e}")
+            messagebox.showerror(
+                "Error", f"Error fetching highest cancer city: {e}")
 
     def show_lowest_cancer_city(self, year):
         try:
             cursor = self.connection.cursor()
 
             # Call the stored procedure to get the city with the lowest count of lung cancer cases for the given year
-            cursor.execute("EXEC Lowest_Lung_Cancer_Cases @Lowest_Year OUTPUT, @Lowest_City OUTPUT", (year, None, None))
+            cursor.execute(
+                "EXEC Lowest_Lung_Cancer_Cases @Lowest_Year OUTPUT, @Lowest_City OUTPUT", (year, None, None))
             result = cursor.fetchone()
 
             if result:
                 lowest_year, lowest_city, pm25_reading, number_of_cases = result
-                self.air_quality_labels["Lowest Lung Cancer Rate"].delete(0, tk.END)
-                self.air_quality_labels["Lowest Lung Cancer Rate"].insert(0, f"{lowest_year}: {lowest_city} ({number_of_cases} cases)")
+                self.air_quality_labels["Lowest Lung Cancer Rate"].delete(
+                    0, tk.END)
+                self.air_quality_labels["Lowest Lung Cancer Rate"].insert(
+                    0, f"{lowest_year}: {lowest_city} ({number_of_cases} cases)")
             else:
-                self.air_quality_labels["Lowest Lung Cancer Rate"].delete(0, tk.END)
-                self.air_quality_labels["Lowest Lung Cancer Rate"].insert(0, f"No data found for {year}.")
+                self.air_quality_labels["Lowest Lung Cancer Rate"].delete(
+                    0, tk.END)
+                self.air_quality_labels["Lowest Lung Cancer Rate"].insert(
+                    0, f"No data found for {year}.")
         except Exception as e:
             print("Error fetching data:", e)
             messagebox.showerror("Error", f"An error occurred: {e}")
-
- 
 
     def add_data(self):
         try:
@@ -543,16 +597,20 @@ class LouisianaMapApp(tk.Tk):
 
                 # Check if the data already exists in the database
                 if self.check_existing_data(formatted_date, city, year):
-                    messagebox.showinfo("Data Exists", "Data already exists in the database for the selected date, city, and year.")
+                    messagebox.showinfo(
+                        "Data Exists", "Data already exists in the database for the selected date, city, and year.")
                 else:
                     # If data does not exist, proceed with insertion
                     self.insert_in_air_pollution_db(formatted_date, city, pm25)
-                    self.insert_in_lung_cancer_db(year, city, rate, lung_cancer_data, population)
-                    messagebox.showinfo("Success", "New data added successfully.")
+                    self.insert_in_lung_cancer_db(
+                        year, city, rate, lung_cancer_data, population)
+                    messagebox.showinfo(
+                        "Success", "New data added successfully.")
 
             else:
                 # Show error message if input is invalid
-                messagebox.showerror("Input Error", "Invalid input. Please enter valid integer values for PM 2.5, Lung Cancer Cases, and Population, and a valid float value for Rate.")
+                messagebox.showerror(
+                    "Input Error", "Invalid input. Please enter valid integer values for PM 2.5, Lung Cancer Cases, and Population, and a valid float value for Rate.")
         except Exception as e:
             # Show error message for any other exception
             messagebox.showerror("Error", f"Error adding new data: {e}")
@@ -571,12 +629,11 @@ class LouisianaMapApp(tk.Tk):
             print("Error checking existing data:", e)
             return False  # Assume data does not exist in case of error
 
-
-
     def insert_in_air_pollution_db(self, formatted_date, city, pm25):
         try:
             cursor = self.connection.cursor()
-            cursor.execute("EXEC Insert_In_Air_Pollution_DB ?, ?, ?", (formatted_date, city, pm25))
+            cursor.execute("EXEC Insert_In_Air_Pollution_DB ?, ?, ?",
+                           (formatted_date, city, pm25))
             self.connection.commit()
             print("Data inserted into Air Pollution DB successfully")
         except Exception as e:
@@ -584,14 +641,13 @@ class LouisianaMapApp(tk.Tk):
             print(error_message)
             messagebox.showerror("Error", error_message)
 
-
-
     def insert_in_lung_cancer_db(self, year, city, rate, lung_cancer_data, population):
         try:
             cursor = self.connection.cursor()
-            
+
             # Fetch the corresponding parish for the given city from the CityToParish table
-            cursor.execute("SELECT Parish FROM CityToParish WHERE City = ?", (city,))
+            cursor.execute(
+                "SELECT Parish FROM CityToParish WHERE City = ?", (city,))
             result = cursor.fetchone()
             if result:
                 parish = result[0]
@@ -599,18 +655,14 @@ class LouisianaMapApp(tk.Tk):
                 raise ValueError(f"No parish found for city: {city}")
 
             # Insert data into LungCancerRates table with the fetched parish
-            cursor.execute("{CALL Insert_In_Lung_Cancer_DB (?, ?, ?, ?, ?)}", (year, parish, rate, lung_cancer_data, population))
+            cursor.execute("{CALL Insert_In_Lung_Cancer_DB (?, ?, ?, ?, ?)}",
+                           (year, parish, rate, lung_cancer_data, population))
             self.connection.commit()
         except Exception as e:
-            messagebox.showerror("Error", f"Error inserting data into Lung Cancer DB: {e}")
+            messagebox.showerror(
+                "Error", f"Error inserting data into Lung Cancer DB: {e}")
 
 
-
-
-
-
-
-            
 if __name__ == "__main__":
     login_page = LoginPage()
     login_page.mainloop()
