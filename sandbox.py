@@ -238,38 +238,6 @@ class LouisianaMapApp(tk.Tk):
             print("Error fetching Lung Cancer Rates:", e)
             return None
 
-    def get_highest_lung_cancer_cases(self, year, city):
-        try:
-            cursor = self.connection.cursor()
-            cursor.execute(
-                "EXEC Highest_Lung_Cancer_Cases @Highest_Year=?, @Highest_City=?", (year, city))
-            row = cursor.fetchone()
-            return row
-        except Exception as e:
-            print("Error fetching highest lung cancer cases:", e)
-            return None
-
-    def get_lowest_lung_cancer_cases(self, year, city):
-        try:
-            cursor = self.connection.cursor()
-            cursor.execute(
-                "EXEC Lowest_Lung_Cancer_Cases @Lowest_Year=?, @Lowest_City=?", (year, city))
-            row = cursor.fetchone()
-            return row
-        except Exception as e:
-            print("Error fetching lowest lung cancer cases:", e)
-            return None
-
-    def get_average_lung_cancer_cases(self, year, city):
-        try:
-            cursor = self.connection.cursor()
-            cursor.execute(
-                "EXEC Average_Lung_Cancer_Cases @Given_Year=?", (year, city))
-            row = cursor.fetchone()
-            return row
-        except Exception as e:
-            print("Error fetching average lung cancer cases:", e)
-            return None
 
     def clear_input(self):
         for widget in self.winfo_children():
@@ -394,12 +362,12 @@ class LouisianaMapApp(tk.Tk):
         return cities.get(city)
 
     def sortSearch(self):
+        sort_method = self.selected_sort_method.get()
         try:
             highest_cancer_count = None
             highest_pm_value = None
             
             cursor = self.connection.cursor()
-            cursor2 = self.connection.cursor()
 
             # Get the selected parish and year from the dropdown menu and year entry
             # Assuming the parish is selected from the city combobox
@@ -414,38 +382,87 @@ class LouisianaMapApp(tk.Tk):
                 except ValueError:
                     messagebox.showerror("Error", "Please enter a valid year.") 
                     return
+                if sort_method == "Highest":
+                    cursor.execute("""
+                        DECLARE @Given_Year INT = ?;
+                        DECLARE @Given_City VARCHAR(50) = ?;
+                        DECLARE @Highest_Cancer_Count INT;
+                        DECLARE @Highest_PM_Value FLOAT;
 
-                cursor.execute("""
-                    DECLARE @Given_Year INT = ?;
-                    DECLARE @Given_City VARCHAR(50) = ?;
-                    DECLARE @Highest_Cancer_Count INT;
-                    DECLARE @Highest_PM_Value FLOAT;
+                        EXEC Highest_Lung_Cancer_Cases 
+                            @Given_Year = @Given_Year,
+                            @Given_City = @Given_City,
+                            @Highest_Cancer_Count = @Highest_Cancer_Count OUTPUT,
+                            @Highest_PM_Value = @Highest_PM_Value OUTPUT;
 
-                    EXEC Highest_Lung_Cancer_Cases 
-                        @Given_Year = @Given_Year,
-                        @Given_City = @Given_City,
-                        @Highest_Cancer_Count = @Highest_Cancer_Count OUTPUT,
-                        @Highest_PM_Value = @Highest_PM_Value OUTPUT;
+                        SELECT @Highest_Cancer_Count AS Highest_Cancer_Count, @Highest_PM_Value AS Highest_PM_Value;
+                    """,
+                                selected_year,
+                                city)
 
-                    SELECT @Highest_Cancer_Count AS Highest_Cancer_Count, @Highest_PM_Value AS Highest_PM_Value;
-                """,
-                            selected_year,
-                            city)
+                    # Fetch the output parameters from the cursor
+                    row = cursor.fetchone()
 
-                # Fetch the output parameters from the cursor
-                row = cursor.fetchone()
+                    # Get the actual output parameter values
+                    highest_cancer_count = row.Highest_Cancer_Count
+                    highest_pm_value = row.Highest_PM_Value
 
-                # Get the actual output parameter values
-                highest_cancer_count = row.Highest_Cancer_Count
-                highest_pm_value = row.Highest_PM_Value
+                    messagebox.showinfo("Sort Search Result", f"City: {city}\nYear: {selected_year}\nHighest Cancer Count: {highest_cancer_count}\nHighest PM Value: {highest_pm_value}")
+                    # Print the output parameters
+                elif sort_method == "Lowest":
+                        cursor.execute("""
+                            DECLARE @Given_Year INT = ?;
+                            DECLARE @Given_City VARCHAR(50) = ?;
+                            DECLARE @Lowest_Cancer_Count INT;
+                            DECLARE @Lowest_PM_Value FLOAT;
 
-                # Print the output parameters
-                print('Highest Cancer Count:', highest_cancer_count)
-                print('Highest PM Value:', highest_pm_value)
+                            EXEC Lowest_Lung_Cancer_Cases 
+                                @Given_Year = @Given_Year,
+                                @Given_City = @Given_City,
+                                @Lowest_Cancer_Count = @Lowest_Cancer_Count OUTPUT,
+                                @Lowest_PM_Value = @Lowest_PM_Value OUTPUT;
 
+                            SELECT @Lowest_Cancer_Count AS Lowest_Cancer_Count, @Lowest_PM_Value AS Lowest_PM_Value;
+                        """,
+                                selected_year,
+                                city)
 
+                    # Fetch the output parameters from the cursor
+                        row = cursor.fetchone()
 
+                    # Get the actual output parameter values
+                        lowest_cancer_count = row.Lowest_Cancer_Count
+                        lowest_pm_value = row.Lowest_PM_Value
 
+                        messagebox.showinfo("Sort Search Result", f"City: {city}\nYear: {selected_year}\nLowest Cancer Count: {lowest_cancer_count}\nLowest PM Value: {lowest_pm_value}")
+                    # Print the output parameters
+                elif sort_method == "Average":
+                        cursor.execute("""
+                            DECLARE @Given_Year INT = ?;
+                            DECLARE @Given_City VARCHAR(50) = ?;
+                            DECLARE @Average_Cancer_Count INT;
+                            DECLARE @Average_PM25 FLOAT;
+
+                            EXEC Average_Lung_Cancer_Cases 
+                                @Given_Year = @Given_Year,
+                                @Given_City = @Given_City,
+                                @Average_Cancer_Count = @Average_Cancer_Count OUTPUT,
+                                @Average_PM25 = @Average_PM25 OUTPUT;
+
+                            SELECT @Average_Cancer_Count AS Average_Cancer_Count, @Average_PM25 AS Average_PM25;
+                        """,
+                                    selected_year,
+                                    city)
+
+                        # Fetch the output parameters from the cursor
+                        row = cursor.fetchone()
+
+                    # Get the actual output parameter values
+                        average_cancer_count = row.Average_Cancer_Count
+                        average_pm_value = row.Average_PM25
+
+                    # Print the output parameters
+                        messagebox.showinfo("Sort Search Result", f"City: {city}\nYear: {selected_year}\nAverage Cancer Count: {average_cancer_count}\nAverage PM Value: {average_pm_value}")
 
         except pyodbc.Error as e:
              # Handle any pyodbc errors
