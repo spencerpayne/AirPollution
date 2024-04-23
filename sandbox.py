@@ -151,7 +151,7 @@ class LouisianaMapApp(tk.Tk):
         self.year_combobox.grid(column=3, row=1, sticky="W")
 
         self.select_year_button = tk.Button(
-            self, text="Search Lung Cancer Rates by Year", command=self.select_year)
+            self, text="Search Lung Cancer Rates by Year", command=self.sortSearch)
         self.select_year_button.grid(column=4, row=1, sticky="W")
 
         self.add_submit_button = tk.Button(
@@ -238,33 +238,33 @@ class LouisianaMapApp(tk.Tk):
             print("Error fetching Lung Cancer Rates:", e)
             return None
 
-    def get_highest_lung_cancer_cases(self, year):
+    def get_highest_lung_cancer_cases(self, year, city):
         try:
             cursor = self.connection.cursor()
             cursor.execute(
-                "EXEC Highest_Lung_Cancer_Cases @Highest_Year=?, @Highest_City=?", (year, None))
+                "EXEC Highest_Lung_Cancer_Cases @Highest_Year=?, @Highest_City=?", (year, city))
             row = cursor.fetchone()
             return row
         except Exception as e:
             print("Error fetching highest lung cancer cases:", e)
             return None
 
-    def get_lowest_lung_cancer_cases(self, year):
+    def get_lowest_lung_cancer_cases(self, year, city):
         try:
             cursor = self.connection.cursor()
             cursor.execute(
-                "EXEC Lowest_Lung_Cancer_Cases @Lowest_Year=?, @Lowest_City=?", (year, None))
+                "EXEC Lowest_Lung_Cancer_Cases @Lowest_Year=?, @Lowest_City=?", (year, city))
             row = cursor.fetchone()
             return row
         except Exception as e:
             print("Error fetching lowest lung cancer cases:", e)
             return None
 
-    def get_average_lung_cancer_cases(self, year):
+    def get_average_lung_cancer_cases(self, year, city):
         try:
             cursor = self.connection.cursor()
             cursor.execute(
-                "EXEC Average_Lung_Cancer_Cases @Given_Year=?", (year,))
+                "EXEC Average_Lung_Cancer_Cases @Given_Year=?", (year, city))
             row = cursor.fetchone()
             return row
         except Exception as e:
@@ -395,41 +395,68 @@ class LouisianaMapApp(tk.Tk):
 
     def sortSearch(self):
         try:
+            highest_cancer_count = None
+            highest_pm_value = None
+            
             cursor = self.connection.cursor()
+            cursor2 = self.connection.cursor()
 
             # Get the selected parish and year from the dropdown menu and year entry
             # Assuming the parish is selected from the city combobox
-            selected_parish = self.selected_city.get()
+            city = self.selected_city.get()
             selected_year = self.selected_year.get()
+            print(city, selected_year)
 
             # Validate if the year entry is not empty and is a valid integer
             if selected_year:
                 try:
-                    selected_year = int(selected_year)
+                    selected_year = (selected_year)
                 except ValueError:
-                    messagebox.showerror("Error", "Please enter a valid year.")
+                    messagebox.showerror("Error", "Please enter a valid year.") 
                     return
 
-            # Construct the SQL query based on whether the user entered a year or not
-            if selected_year:
-                cursor.execute(
-                    "EXEC Highest_Lung_Cancer_Cases @Highest_Year=?, @Highest_City=?", (selected_year, selected_parish))
-            else:
-                cursor.execute(
-                    "EXEC Highest_Lung_Cancer_Cases @Highest_City=?", (selected_parish,))
+                cursor.execute("""
+                    DECLARE @Given_Year INT = ?;
+                    DECLARE @Given_City VARCHAR(50) = ?;
+                    DECLARE @Highest_Cancer_Count INT;
+                    DECLARE @Highest_PM_Value FLOAT;
 
-            result = cursor.fetchone()
+                    EXEC Highest_Lung_Cancer_Cases 
+                        @Given_Year = @Given_Year,
+                        @Given_City = @Given_City,
+                        @Highest_Cancer_Count = @Highest_Cancer_Count OUTPUT,
+                        @Highest_PM_Value = @Highest_PM_Value OUTPUT;
 
-            if result:
-                count, year = result
-                messagebox.showinfo("Sort Search Result", f"The count of lung cancer cases in {
-                                    selected_parish} in {year} is {count}.")
-            else:
-                messagebox.showinfo("Sort Search Result", f"No lung cancer cases found for {
-                                    selected_parish} in {selected_year}.")
+                    SELECT @Highest_Cancer_Count AS Highest_Cancer_Count, @Highest_PM_Value AS Highest_PM_Value;
+                """,
+                            selected_year,
+                            city)
 
-        except Exception as e:
-            print("Error performing sort search:", e)
+                # Fetch the output parameters from the cursor
+                row = cursor.fetchone()
+
+                # Get the actual output parameter values
+                highest_cancer_count = row.Highest_Cancer_Count
+                highest_pm_value = row.Highest_PM_Value
+
+                # Print the output parameters
+                print('Highest Cancer Count:', highest_cancer_count)
+                print('Highest PM Value:', highest_pm_value)
+
+
+
+
+
+        except pyodbc.Error as e:
+             # Handle any pyodbc errors
+            messagebox.showerror("Error", f"Error performing sort search: {e}")
+
+
+
+
+
+
+
 
     def open_new_data_window(self):
         try:
@@ -492,13 +519,17 @@ class LouisianaMapApp(tk.Tk):
     def select_year(self):
         try:
             selected_year = self.selected_year.get()
+            selected_city = self.selected_city.get()
+            print(selected_year)
+            print(selected_city)
             if selected_year:
-                highest_cases = self.get_highest_lung_cancer_cases(
-                    selected_year)
-                lowest_cases = self.get_lowest_lung_cancer_cases(selected_year)
+                highest_cases = self.get_highest_lung_cancer_cases(selected_year, selected_city)
+                lowest_cases = self.get_lowest_lung_cancer_cases(selected_year, selected_city)
                 average_cases = self.get_average_lung_cancer_cases(
-                    selected_year)
-
+                    selected_year, selected_city)
+                    
+    
+            
                 if highest_cases:
                     messagebox.showinfo("Highest Lung Cancer Cases", f"The highest number of lung cancer cases occurred in {
                                         highest_cases[1]} in {highest_cases[0]} with {highest_cases[2]} cases.")
@@ -524,17 +555,18 @@ class LouisianaMapApp(tk.Tk):
         except Exception as e:
             print("Error selecting year:", e)
 
-    def show_highest_cancer_city(self, year):
+    def show_highest_cancer_city(self, selected_year, selected_city):
         try:
             cursor = self.connection.cursor()
 
             # Call the stored procedure to get the city with the highest count of lung cancer cases for the given year
             cursor.execute(
-                "EXEC Highest_Lung_Cancer_Cases @Highest_Year OUTPUT, @Highest_City OUTPUT", (year, None, None))
-            result = cursor.fetchone()
+                "{Call} Highest_Lung_Cancer_Cases @Given_Year = ?, @Given_City = ?", (selected_year, selected_city))
+            result = cursor.fetchall()
+            print(result)
 
             if result:
-                highest_year, highest_city, pm25_reading, number_of_cases = result
+                highest_year, highest_city, number_of_cases = result
                 self.air_quality_labels["Highest Lung Cancer Rate"].delete(
                     0, tk.END)
                 self.air_quality_labels["Highest Lung Cancer Rate"].insert(
