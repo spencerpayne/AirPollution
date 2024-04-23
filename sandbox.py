@@ -3,9 +3,9 @@ from tkinter import *
 import pyodbc   # our database connector
 import tkcalendar   # calendar
 import tkintermapview   # map
-from tkinter import ttk
-from tkinter import messagebox
-from datetime import datetime
+from tkinter import ttk # ttk is apart of TKinter, gives us the option to use a combobox
+from tkinter import messagebox  # messagebox for the sort methods
+from datetime import datetime   # datetime is used to convert the date to a year for the Lung Cancer table.
 
 
 class LoginPage(tk.Tk):
@@ -48,6 +48,7 @@ class LoginPage(tk.Tk):
         password = self.password_entry.get()
 
         try:    # then it puts the username and password into the connection string.
+                # this login is for getting into the actual program
             AirPollutionDB = {
                 'server': 'localhost',
                 'database': 'AirPollutionLungCancerDB',
@@ -80,7 +81,7 @@ class LoginPage(tk.Tk):
         try:    # logs in with username and password
             # Open the main application window with the retrieved username and password
             app = LouisianaMapApp(
-                username=username, password=password, cities=self.cities)
+                username=username, password=password, cities=self.cities)   # load the list of cities
             app.mainloop()
         except Exception as e:
             messagebox.showerror(
@@ -106,8 +107,6 @@ class LouisianaMapApp(tk.Tk):
         self.title("Air Quality of Louisiana")
         self.geometry("1300x700")
 
-        self.admin = admin
-
         self.create_widgets()   # calls the create widgets function
 
         # Call the loadCities method to populate the city combobox
@@ -118,8 +117,8 @@ class LouisianaMapApp(tk.Tk):
             AirPollutionDB = {
                 'server': 'localhost',
                 'database': 'AirPollutionLungCancerDB',
-                'username': self.username,
-                'password': self.password,
+                'username': self.username,  # uses the input username from the login screen
+                'password': self.password,  # uses the input password from the login screen
                 'driver': '{ODBC Driver 18 for SQL Server}'
             }
 
@@ -133,6 +132,8 @@ class LouisianaMapApp(tk.Tk):
         except Exception as e:
             print("Error establishing database connection:", e)
 
+    # this method creates all of the widgets for our main page: calendar, map, entries, etc...
+    # it also places them accordingly
     def create_widgets(self):
         self.date_label = tk.Label(self, text="Date: ")
         self.date_label.grid(column=0, row=2, sticky="NW", pady=(100, 10))
@@ -151,7 +152,7 @@ class LouisianaMapApp(tk.Tk):
         self.year_combobox.grid(column=3, row=1, sticky="W")
 
         self.select_year_button = tk.Button(
-            self, text="Search Lung Cancer Rates by Year", command=self.sortSearch)
+            self, text="Search with Sort", command=self.sortSearch)
         self.select_year_button.grid(column=4, row=1, sticky="W")
 
         self.add_submit_button = tk.Button(
@@ -262,6 +263,7 @@ class LouisianaMapApp(tk.Tk):
         except Exception as e:
             print("Error in loadCities:", e)
 
+    # method that gets the user input from the main application page. City and Date and then passes it to the database.
     def on_user_input(self):
         city = self.selected_city.get()
         date_str = self.calendar.get_date()
@@ -306,6 +308,7 @@ class LouisianaMapApp(tk.Tk):
         else:
             print("No Cancer Rate Data found")
 
+    # method that adds the marker to the map and adds the city, date, PM2.5, and Lung Cancer Count to the marker.
     def update_marker(self, coords, city, date, air_quality_data, lung_cancer_data):
         print("Updating marker...")
         print("Coordinates:", coords)
@@ -317,10 +320,12 @@ class LouisianaMapApp(tk.Tk):
         # Check if marker exists for the coordinates
         if coords in self.marker_dict:
             print("Marker already exists.")
+
             # If marker exists, check if the new city is the same as the city of the existing marker
             existing_marker_city = self.marker_dict[coords]["city"]
             if existing_marker_city == city:
                 print("City matches existing marker.")
+
                 # If the cities match, update the text of the existing marker with new data
                 marker_text = f"City: {city}, Date: {date}\nPM 2.5: {
                     air_quality_data if air_quality_data else 'N/A'}\nLung Cancer Cases: {lung_cancer_data if lung_cancer_data else 'N/A'}"
@@ -332,7 +337,7 @@ class LouisianaMapApp(tk.Tk):
                 self.map_widget.remove_marker(
                     self.marker_dict[coords]["marker"])
                 del self.marker_dict[coords]
-
+        # if there is no marker, create one.
         print("Creating new marker...")
         marker_text = f"City: {city}\nDate: {date}\nPM 2.5: {
             air_quality_data if air_quality_data else 'N/A'}\nLung Cancer Cases: {lung_cancer_data if lung_cancer_data else 'N/A'}"
@@ -340,6 +345,7 @@ class LouisianaMapApp(tk.Tk):
             coords[0], coords[1], text=marker_text, font=('Arial', 10))
         self.marker_dict[coords] = {"marker": new_marker, "city": city}
 
+    # this method is so the map knows where to place a marker depending on the city selection.
     def fetch_coordinates(self, city):
         cities = {
             "Alexandria": (31.332153069519233, -92.478657421875),
@@ -361,8 +367,10 @@ class LouisianaMapApp(tk.Tk):
         # Return coordinates for the specified city if found
         return cities.get(city)
 
+    # this method uses the stored procedures to output either the lowest, highest, or average lung cancer cases depending on the user's 
+    # input of city, year, and sort method.
     def sortSearch(self):
-        sort_method = self.selected_sort_method.get()
+        sort_method = self.selected_sort_method.get()   # gets the sort method from the combobox.
         try:
             highest_cancer_count = None
             highest_pm_value = None
@@ -382,6 +390,8 @@ class LouisianaMapApp(tk.Tk):
                 except ValueError:
                     messagebox.showerror("Error", "Please enter a valid year.") 
                     return
+                
+                # Highest_Lung_Cancer_Cases Stored Procedure
                 if sort_method == "Highest":
                     cursor.execute("""
                         DECLARE @Given_Year INT = ?;
@@ -398,7 +408,7 @@ class LouisianaMapApp(tk.Tk):
                         SELECT @Highest_Cancer_Count AS Highest_Cancer_Count, @Highest_PM_Value AS Highest_PM_Value;
                     """,
                                 selected_year,
-                                city)
+                                city)   # uses selected year and city for the input.
 
                     # Fetch the output parameters from the cursor
                     row = cursor.fetchone()
@@ -407,8 +417,9 @@ class LouisianaMapApp(tk.Tk):
                     highest_cancer_count = row.Highest_Cancer_Count
                     highest_pm_value = row.Highest_PM_Value
 
+                    # pops up a message with the appropriate information for the user.
                     messagebox.showinfo("Sort Search Result", f"City: {city}\nYear: {selected_year}\nHighest Cancer Count: {highest_cancer_count}\nHighest PM Value: {highest_pm_value}")
-                    # Print the output parameters
+                    
                 elif sort_method == "Lowest":
                         cursor.execute("""
                             DECLARE @Given_Year INT = ?;
@@ -461,20 +472,14 @@ class LouisianaMapApp(tk.Tk):
                         average_cancer_count = row.Average_Cancer_Count
                         average_pm_value = row.Average_PM25
 
-                    # Print the output parameters
+                    # Messagebox that informs the user of the output.
                         messagebox.showinfo("Sort Search Result", f"City: {city}\nYear: {selected_year}\nAverage Cancer Count: {average_cancer_count}\nAverage PM Value: {average_pm_value}")
 
         except pyodbc.Error as e:
              # Handle any pyodbc errors
             messagebox.showerror("Error", f"Error performing sort search: {e}")
 
-
-
-
-
-
-
-
+    # method that actually opens the window and loads the cities.
     def open_new_data_window(self):
         try:
             # Pass your predefined list of cities to the create_new_data_window method
@@ -482,6 +487,7 @@ class LouisianaMapApp(tk.Tk):
         except Exception as e:
             print("Error opening new data window:", e)
 
+    # method for opening the new data window. Called when the user presses "Add Data", creates widgets and more for the window.
     def create_new_data_window(self, city_names):
         try:
             top = Toplevel()
@@ -533,94 +539,7 @@ class LouisianaMapApp(tk.Tk):
         except Exception as e:
             print("Error creating new data window:", e)
 
-    def select_year(self):
-        try:
-            selected_year = self.selected_year.get()
-            selected_city = self.selected_city.get()
-            print(selected_year)
-            print(selected_city)
-            if selected_year:
-                highest_cases = self.get_highest_lung_cancer_cases(selected_year, selected_city)
-                lowest_cases = self.get_lowest_lung_cancer_cases(selected_year, selected_city)
-                average_cases = self.get_average_lung_cancer_cases(
-                    selected_year, selected_city)
-                    
-    
-            
-                if highest_cases:
-                    messagebox.showinfo("Highest Lung Cancer Cases", f"The highest number of lung cancer cases occurred in {
-                                        highest_cases[1]} in {highest_cases[0]} with {highest_cases[2]} cases.")
-                else:
-                    messagebox.showinfo(
-                        "Highest Lung Cancer Cases", f"No lung cancer cases found for the selected year.")
-
-                if lowest_cases:
-                    messagebox.showinfo("Lowest Lung Cancer Cases", f"The lowest number of lung cancer cases occurred in {
-                                        lowest_cases[1]} in {lowest_cases[0]} with {lowest_cases[2]} cases.")
-                else:
-                    messagebox.showinfo(
-                        "Lowest Lung Cancer Cases", f"No lung cancer cases found for the selected year.")
-
-                if average_cases:
-                    messagebox.showinfo("Average Lung Cancer Cases", f"The average number of lung cancer cases for the selected year is {
-                                        average_cases[0]} with an average PM 2.5 value of {average_cases[1]}.")
-                else:
-                    messagebox.showinfo(
-                        "Average Lung Cancer Cases", f"No lung cancer cases found for the selected year.")
-            else:
-                messagebox.showerror("Error", "Please select a year first.")
-        except Exception as e:
-            print("Error selecting year:", e)
-
-    def show_highest_cancer_city(self, selected_year, selected_city):
-        try:
-            cursor = self.connection.cursor()
-
-            # Call the stored procedure to get the city with the highest count of lung cancer cases for the given year
-            cursor.execute(
-                "{Call} Highest_Lung_Cancer_Cases @Given_Year = ?, @Given_City = ?", (selected_year, selected_city))
-            result = cursor.fetchall()
-            print(result)
-
-            if result:
-                highest_year, highest_city, number_of_cases = result
-                self.air_quality_labels["Highest Lung Cancer Rate"].delete(
-                    0, tk.END)
-                self.air_quality_labels["Highest Lung Cancer Rate"].insert(
-                    0, f"{highest_year}: {highest_city} ({number_of_cases} cases)")
-            else:
-                self.air_quality_labels["Highest Lung Cancer Rate"].delete(
-                    0, tk.END)
-                self.air_quality_labels["Highest Lung Cancer Rate"].insert(
-                    0, f"No data found for {year}.")
-        except Exception as e:
-            messagebox.showerror(
-                "Error", f"Error fetching highest cancer city: {e}")
-
-    def show_lowest_cancer_city(self, year):
-        try:
-            cursor = self.connection.cursor()
-
-            # Call the stored procedure to get the city with the lowest count of lung cancer cases for the given year
-            cursor.execute(
-                "EXEC Lowest_Lung_Cancer_Cases @Lowest_Year OUTPUT, @Lowest_City OUTPUT", (year, None, None))
-            result = cursor.fetchone()
-
-            if result:
-                lowest_year, lowest_city, pm25_reading, number_of_cases = result
-                self.air_quality_labels["Lowest Lung Cancer Rate"].delete(
-                    0, tk.END)
-                self.air_quality_labels["Lowest Lung Cancer Rate"].insert(
-                    0, f"{lowest_year}: {lowest_city} ({number_of_cases} cases)")
-            else:
-                self.air_quality_labels["Lowest Lung Cancer Rate"].delete(
-                    0, tk.END)
-                self.air_quality_labels["Lowest Lung Cancer Rate"].insert(
-                    0, f"No data found for {year}.")
-        except Exception as e:
-            print("Error fetching data:", e)
-            messagebox.showerror("Error", f"An error occurred: {e}")
-
+    # this method is for the submitting data to the database, it gets the entries from the user and correctly formats them.
     def add_data(self):
         try:
             # Get data from the entry fields
@@ -641,7 +560,7 @@ class LouisianaMapApp(tk.Tk):
                 population = int(population)
                 rate = float(rate)
 
-                # Extract the year from the date
+                # Extract the year from the date - this is important for the LungCancerRates table.
                 year = date_obj.year
 
                 # Check if the data already exists in the database
@@ -664,6 +583,7 @@ class LouisianaMapApp(tk.Tk):
             # Show error message for any other exception
             messagebox.showerror("Error", f"Error adding new data: {e}")
 
+    # since our database does not like duplicate data, this method checks that data does not already exist before entering it into database.
     def check_existing_data(self, date, city, year):
         try:
             cursor = self.connection.cursor()
@@ -678,6 +598,7 @@ class LouisianaMapApp(tk.Tk):
             print("Error checking existing data:", e)
             return False  # Assume data does not exist in case of error
 
+    # this method gets the date in yyyy-mm-dd format, city, and pm2.5. It then inserts it into the AirPollutionRates table.
     def insert_in_air_pollution_db(self, formatted_date, city, pm25):
         try:
             cursor = self.connection.cursor()
@@ -690,6 +611,7 @@ class LouisianaMapApp(tk.Tk):
             print(error_message)
             messagebox.showerror("Error", error_message)
 
+    # this method gets the year, city, lung cancer rate, count, and population. It converts the city to the corresponding parish in the CityToParish table
     def insert_in_lung_cancer_db(self, year, city, rate, lung_cancer_data, population):
         try:
             cursor = self.connection.cursor()
@@ -703,14 +625,13 @@ class LouisianaMapApp(tk.Tk):
             else:
                 raise ValueError(f"No parish found for city: {city}")
 
-            # Insert data into LungCancerRates table with the fetched parish
+            # Insert data into LungCancerRates table with the fetched parish - uses stored procedure
             cursor.execute("{CALL Insert_In_Lung_Cancer_DB (?, ?, ?, ?, ?)}",
                            (year, parish, rate, lung_cancer_data, population))
             self.connection.commit()
         except Exception as e:
             messagebox.showerror(
                 "Error", f"Error inserting data into Lung Cancer DB: {e}")
-
 
 if __name__ == "__main__":
     login_page = LoginPage()
