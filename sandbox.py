@@ -605,7 +605,7 @@ class LouisianaMapApp(tk.Tk):
     def insert_in_air_pollution_db(self, formatted_date, city, pm25):
         try:
             cursor = self.connection.cursor()
-            cursor.execute("EXEC Insert_In_Air_Pollution_DB ?, ?, ?",
+            cursor.execute("EXEC Insert_In_Air_Pollution_DB ?, ?, ?",   # call the stored procedure
                            (formatted_date, city, pm25))
             self.connection.commit()
             print("Data inserted into Air Pollution DB successfully")
