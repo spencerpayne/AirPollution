@@ -207,6 +207,7 @@ class LouisianaMapApp(tk.Tk):
             entry.grid(column=2, row=6+i*30, sticky="SE")
             self.air_quality_labels[label_text] = entry
 
+    # method that converts the City to Parish, and then gets the corresponding PM2.5 values for that city.
     def fetch_air_quality_data(self, city, date):
         try:
             cursor = self.connection.cursor()
@@ -223,6 +224,7 @@ class LouisianaMapApp(tk.Tk):
             print("Error fetching air quality data:", e)
             return None
 
+    # similar to the method above, it fetches lung cancer rates.
     def fetch_lung_cancer_rates(self, city, year):
         try:
             cursor = self.connection.cursor()
@@ -239,7 +241,7 @@ class LouisianaMapApp(tk.Tk):
             print("Error fetching Lung Cancer Rates:", e)
             return None
 
-
+    # this method clears text from the entries, and removes the markers from the map.
     def clear_input(self):
         for widget in self.winfo_children():
             # Check if the widget is an entry box
@@ -253,6 +255,7 @@ class LouisianaMapApp(tk.Tk):
             # Clear the marker dictionary
         self.marker_dict = {}
 
+    # loads the cities into the combobox.
     def loadCities(self):
         try:
             cities = ["Shreveport", "Alexandria", "Monroe", "BatonRouge", "Hammond", "Houma", "Chalmette",
@@ -345,7 +348,7 @@ class LouisianaMapApp(tk.Tk):
             coords[0], coords[1], text=marker_text, font=('Arial', 10))
         self.marker_dict[coords] = {"marker": new_marker, "city": city}
 
-    # this method is so the map knows where to place a marker depending on the city selection.
+    # this method is so the map knows where to place a marker depending on the city selection. 
     def fetch_coordinates(self, city):
         cities = {
             "Alexandria": (31.332153069519233, -92.478657421875),
@@ -633,6 +636,7 @@ class LouisianaMapApp(tk.Tk):
             messagebox.showerror(
                 "Error", f"Error inserting data into Lung Cancer DB: {e}")
 
+# crucial for the program to open.
 if __name__ == "__main__":
     login_page = LoginPage()
     login_page.mainloop()
